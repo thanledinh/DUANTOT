@@ -16,7 +16,6 @@ Route::post('product', [apiProductController::class, 'store']);
 Route::put('product/{id}', [apiProductController::class, 'update']);
 Route::delete('product/{id}', [apiProductController::class, 'delete']);
 
-
 Route::get('products/variants', [apiProductVariantController::class, 'index']);
 Route::get('products/variants/product_id={product_id}', [apiProductVariantController::class, 'getProductsByProductId']);
 Route::get('products/variants/product_id={product_id}/variant_id={id}', [apiProductVariantController::class, 'getVariantByProductIdAndVariantId']);
