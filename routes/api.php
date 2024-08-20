@@ -10,7 +10,7 @@ Route::get('/user', function (Request $request) {
 
 
 Route::get('products', [apiProductController::class, 'index']);
-Route::get('product/{id}', [apiProductController::class, 'show']);
+
 
 Route::post('product', [apiProductController::class, 'store']);
 Route::put('product/{id}', [apiProductController::class, 'update']);
