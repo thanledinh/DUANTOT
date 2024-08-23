@@ -73,10 +73,7 @@ class apiProductController extends Controller
         // Tìm sản phẩm
         $product = Product::findOrFail($id);
 
-        // Cập nhật sản phẩm
         $product->update($request->all());
-
-        // Nếu có biến thể mới được gửi trong request, có thể xử lý cập nhật hoặc tạo mới ở đây
 
         return response()->json($product->load('variants'), 200);
     }
