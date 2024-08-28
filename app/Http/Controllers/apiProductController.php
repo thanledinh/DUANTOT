@@ -78,6 +78,18 @@ class apiProductController extends Controller
         return response()->json($product->load('variants'), 200);
     }
 
+    public function search($query)
+    {
+        $products = Product::with('variants')
+                    ->where('name', 'like', '%' . $query . '%')
+                    ->orWhere('barcode', $query)
+                    ->get();
+    
+        return response()->json($products, 200);
+    }
+    
+
+
     public function delete($id)
     {
         // Tìm và xóa sản phẩm

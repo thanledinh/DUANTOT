@@ -17,6 +17,9 @@ Route::prefix('products')->group(function () {
     Route::post('/', [apiProductController::class, 'store']);
     Route::put('/{id}', [apiProductController::class, 'update']);
     Route::delete('/{id}', [apiProductController::class, 'delete']);
+    Route::get('/search/{query}', [apiProductController::class, 'search']);
+
+
 
     // Nhóm các route liên quan đến variants của product
     Route::prefix('variants')->group(function () {
