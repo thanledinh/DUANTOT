@@ -11,7 +11,7 @@ Route::group([
     'middleware' => 'api',
     'prefix' => 'auth'
 ], function () {
-    Route::post('/admin-login', [AuthController::class, 'adminLogin']);
+    Route::post('/admin/login', [AuthController::class, 'adminLogin']);
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:api');
@@ -46,5 +46,8 @@ Route::prefix('products')->group(function () {
     });
 });
 
-// Nhóm các route liên quan đến categories
-Route::apiResource('categories', apiCategoryController::class);
+Route::get('/categories', [apiCategoryController::class, 'index']);
+Route::get('/categories/{id}', [apiCategoryController::class, 'show']);
+Route::post('/categories', [apiCategoryController::class, 'store']);
+Route::put('/categories/{id}', [apiCategoryController::class, 'update']);
+Route::delete('/categories/{id}', [apiCategoryController::class, 'delete']);
