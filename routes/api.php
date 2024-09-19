@@ -50,4 +50,4 @@ Route::get('/categories', [apiCategoryController::class, 'index']);
 Route::get('/categories/{id}', [apiCategoryController::class, 'show']);
 Route::post('/categories', [apiCategoryController::class, 'store']);
 Route::put('/categories/{id}', [apiCategoryController::class, 'update']);
-Route::delete('/categories/{id}', [apiCategoryController::class, 'delete']);
+Route::delete('/categories/{id}', [apiCategoryController::class, 'destroy']);

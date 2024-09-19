@@ -82,9 +82,15 @@ class apiCategoryController extends Controller
             'parent_id' => 'nullable|integer|exists:categories,id', // Thêm validation cho parent_id
         ]);
 
+        // Xử lý upload hình ảnh nếu có
+        if ($request->image) {
+            $imagePath = $this->handleImageUpload($request->image, 'category'); // Gọi hàm upload hình ảnh
+            $category->image = $imagePath; // Lưu tên hình ảnh vào cơ sở dữ liệu
+        }
+
+        // Cập nhật các trường khác
         $category->name = $request->name;
         $category->description = $request->description;
-        $category->image = $request->image;
         $category->parent_id = $request->parent_id; // Cập nhật parent_id
         $category->save();
 
