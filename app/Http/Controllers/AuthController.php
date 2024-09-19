@@ -7,7 +7,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use App\Models\User;
-
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class AuthController extends BaseController
 {
@@ -106,26 +108,26 @@ class AuthController extends BaseController
             'email' => 'required|email',
             'password' => 'required|string|min:6',
         ]);
-    
+
         if ($validator->fails()) {
             return $this->sendError('Validation Error.', $validator->errors());
         }
-    
+
         $credentials = $request->only('email', 'password');
-    
+
         if (!$token = auth('api')->attempt($credentials)) {
             return $this->sendError('Unauthorized', ['error' => 'Invalid credentials'], 401);
         }
-    
+
         $user = auth('api')->user();
         if ($user->user_type !== 'admin') {
             auth('api')->logout();
             return $this->sendError('Unauthorized', ['error' => 'You are not authorized to access this area'], 403);
         }
-    
+
         return $this->createNewToken($token);
     }
-    
+
     protected function createNewToken($token)
     {
         return $this->sendResponse([
@@ -145,4 +147,57 @@ class AuthController extends BaseController
             'expires_in' => auth()->factory()->getTTL() * 60,
         ];
     }
+
+
+    public function forgotPassword(Request $request)
+    {
+        // Validate the email
+        $request->validate(['email' => 'required|email']);
+    
+        // Attempt to send the password reset link
+        $response = Password::sendResetLink($request->only('email'));
+    
+        // Return a JSON response based on the result
+        return $response == Password::RESET_LINK_SENT
+            ? response()->json(['message' => 'Password reset link sent to your email.'])
+            : response()->json(['message' => 'Unable to send reset link.'], 400);
+    }
+    
+
+
+    // Đặt lại mật khẩu
+    public function resetPassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'token' => 'required',
+            'email' => 'required|email',
+            'password' => 'required|string|min:6|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->sendError('Validation Error.', $validator->errors());
+        }
+
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function ($user, $password) {
+                $user->password = Hash::make($password);
+                $user->setRememberToken(Str::random(60));
+                $user->save();
+            }
+        );
+
+        if ($status === Password::PASSWORD_RESET) {
+            return $this->sendResponse([], 'Password reset successfully.');
+        }
+
+        return $this->sendError('Error', ['email' => __($status)]);
+    }
+
+
+
+
+
+
+
 }
