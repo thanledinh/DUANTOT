@@ -7,9 +7,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use App\Models\User;
-use Illuminate\Support\Facades\Password;
+
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class AuthController extends BaseController
 {
@@ -149,55 +153,71 @@ class AuthController extends BaseController
     }
 
 
+
     public function forgotPassword(Request $request)
     {
-        // Validate the email
+        // Xác thực email
         $request->validate(['email' => 'required|email']);
     
-        // Attempt to send the password reset link
-        $response = Password::sendResetLink($request->only('email'));
+        // Tạo mã OTP ngẫu nhiên (6 chữ số)
+        $otp = rand(100000, 999999); // Tạo mã OTP từ 100000 đến 999999
     
-        // Return a JSON response based on the result
-        return $response == Password::RESET_LINK_SENT
-            ? response()->json(['message' => 'Password reset link sent to your email.'])
-            : response()->json(['message' => 'Unable to send reset link.'], 400);
+        // Tính thời gian hết hạn (ví dụ: 5 phút)
+        $expiresAt = Carbon::now()->addMinutes(5);
+    
+        // Lưu mã OTP vào bảng otps
+        DB::table('otps')->insert([
+            'email' => $request->email,
+            'otp' => $otp,
+            'expires_at' => $expiresAt,
+            'created_at' => now(),
+        ]);
+    
+        // Gửi mã OTP đến email của người dùng
+        Mail::raw("Mã OTP của bạn để đặt lại mật khẩu là: $otp", function ($message) use ($request) {
+            $message->to($request->email)
+                    ->subject('Mã OTP Đặt Lại Mật Khẩu');
+        });
+    
+        return response()->json(['message' => 'Mã OTP đã được gửi đến email của bạn.']);
     }
     
-
-
-    // Đặt lại mật khẩu
     public function resetPassword(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'token' => 'required',
+            'otp' => 'required|integer', // Xác thực mã OTP là số
             'email' => 'required|email',
-            'password' => 'required|string|min:6|confirmed',
+            'password' => 'required|string|min:6|confirmed', // Xác thực mật khẩu và xác nhận
         ]);
-
+    
         if ($validator->fails()) {
-            return $this->sendError('Validation Error.', $validator->errors());
+            return $this->sendError('Lỗi xác thực.', $validator->errors());
         }
-
-        $status = Password::reset(
-            $request->only('email', 'password', 'password_confirmation', 'token'),
-            function ($user, $password) {
-                $user->password = Hash::make($password);
-                $user->setRememberToken(Str::random(60));
-                $user->save();
-            }
-        );
-
-        if ($status === Password::PASSWORD_RESET) {
-            return $this->sendResponse([], 'Password reset successfully.');
+    
+        // Kiểm tra mã OTP trong bảng otps
+        $otpRecord = DB::table('otps')
+            ->where('email', $request->email)
+            ->where('otp', $request->otp)
+            ->where('expires_at', '>', now()) // Kiểm tra xem OTP có còn hiệu lực không
+            ->first();
+    
+        if (!$otpRecord) {
+            return $this->sendError('Mã OTP không hợp lệ hoặc đã hết hạn.', [], 400);
         }
-
-        return $this->sendError('Error', ['email' => __($status)]);
+    
+        // Đặt lại mật khẩu
+        $user = User::where('email', $request->email)->first();
+        if (!$user) {
+            return $this->sendError('Người dùng không tồn tại.', [], 404);
+        }
+    
+        $user->password = Hash::make($request->password);
+        $user->setRememberToken(Str::random(60));
+        $user->save();
+    
+        // Xóa mã OTP khỏi bảng otps
+        DB::table('otps')->where('id', $otpRecord->id)->delete();
+    
+        return $this->sendResponse([], 'Mật khẩu đã được đặt lại thành công.');
     }
-
-
-
-
-
-
-
 }
