@@ -158,13 +158,13 @@ class AuthController extends BaseController
     {
         // Xác thực email
         $request->validate(['email' => 'required|email']);
-    
+
         // Tạo mã OTP ngẫu nhiên (6 chữ số)
         $otp = rand(100000, 999999); // Tạo mã OTP từ 100000 đến 999999
-    
+
         // Tính thời gian hết hạn (ví dụ: 5 phút)
         $expiresAt = Carbon::now()->addMinutes(5);
-    
+
         // Lưu mã OTP vào bảng otps
         DB::table('otps')->insert([
             'email' => $request->email,
@@ -172,16 +172,16 @@ class AuthController extends BaseController
             'expires_at' => $expiresAt,
             'created_at' => now(),
         ]);
-    
+
         // Gửi mã OTP đến email của người dùng
         Mail::raw("Mã OTP của bạn để đặt lại mật khẩu là: $otp", function ($message) use ($request) {
             $message->to($request->email)
-                    ->subject('Mã OTP Đặt Lại Mật Khẩu');
+                ->subject('Mã OTP Đặt Lại Mật Khẩu');
         });
-    
+
         return response()->json(['message' => 'Mã OTP đã được gửi đến email của bạn.']);
     }
-    
+
     public function resetPassword(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -189,35 +189,62 @@ class AuthController extends BaseController
             'email' => 'required|email',
             'password' => 'required|string|min:6|confirmed', // Xác thực mật khẩu và xác nhận
         ]);
-    
+
         if ($validator->fails()) {
             return $this->sendError('Lỗi xác thực.', $validator->errors());
         }
-    
+
         // Kiểm tra mã OTP trong bảng otps
         $otpRecord = DB::table('otps')
             ->where('email', $request->email)
             ->where('otp', $request->otp)
             ->where('expires_at', '>', now()) // Kiểm tra xem OTP có còn hiệu lực không
             ->first();
-    
+
         if (!$otpRecord) {
             return $this->sendError('Mã OTP không hợp lệ hoặc đã hết hạn.', [], 400);
         }
-    
+
         // Đặt lại mật khẩu
         $user = User::where('email', $request->email)->first();
         if (!$user) {
             return $this->sendError('Người dùng không tồn tại.', [], 404);
         }
-    
+
         $user->password = Hash::make($request->password);
         $user->setRememberToken(Str::random(60));
         $user->save();
-    
+
         // Xóa mã OTP khỏi bảng otps
         DB::table('otps')->where('id', $otpRecord->id)->delete();
-    
+
         return $this->sendResponse([], 'Mật khẩu đã được đặt lại thành công.');
+    }
+
+    public function changePassword(Request $request)
+    {
+        // Xác thực dữ liệu đầu vào
+        $validator = Validator::make($request->all(), [
+            'current_password' => 'required|string|min:6',
+            'new_password' => 'required|string|min:6|confirmed', // Xác thực mật khẩu mới và xác nhận
+        ]);
+
+        if ($validator->fails()) {
+            return $this->sendError('Lỗi xác thực.', $validator->errors());
+        }
+
+        // Lấy người dùng hiện tại
+        $user = Auth::user();
+
+        // Kiểm tra mật khẩu cũ
+        if (!Hash::check($request->current_password, $user->password)) {
+            return $this->sendError('Mật khẩu cũ không chính xác.', [], 400);
+        }
+
+        // Cập nhật mật khẩu mới
+        $user->password = Hash::make($request->new_password);
+        $user->save();
+
+        return $this->sendResponse([], 'Mật khẩu đã được thay đổi thành công.');
     }
 }
