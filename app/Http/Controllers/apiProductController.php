@@ -8,7 +8,7 @@ use App\Models\ProductVariant;
 
 class apiProductController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $products = Product::with('variants')->get();
         return response()->json($products, 200);
@@ -86,4 +86,31 @@ class apiProductController extends Controller
         file_put_contents(public_path('images/products/') . $imageName, $imageData);
         return 'images/products/' . $imageName;
     }
+
+
+    public function products_paginate(Request $request)
+    {
+        $perPage = $request->input('per_page');
+        $totalProducts = Product::count();
+        if ($totalProducts > $perPage) {
+
+            $products = Product::paginate($perPage);
+        } else {
+            $products = Product::all();
+        }
+        return response()->json($products);
+    }
+
+
+    public function sortByPrice(Request $request)
+    {
+        $priceOrder = $request->input('price', 'desc'); 
+
+        $products = Product::with(['variants' => function($query) use ($priceOrder) {
+            $query->orderBy('price', $priceOrder);
+        }])->get();
+
+        return response()->json($products);
+    }
+
 }
