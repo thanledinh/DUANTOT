@@ -6,28 +6,22 @@ use Illuminate\Support\Facades\Schema;
 
 class CreatePromotionsTable extends Migration
 {
-    /**
-     * Run the migrations.
-     */
-    public function up(): void
+    public function up()
     {
         Schema::create('promotions', function (Blueprint $table) {
-            $table->id(); 
-            $table->string('code')->unique(); 
-            $table->string('description')->nullable(); 
-            $table->decimal('discount_percentage', 5, 2)->nullable(); 
-            $table->decimal('discount_amount', 10, 2)->nullable(); 
-            $table->string('promotion_type'); 
+            $table->id();
+            $table->string('code');
+            $table->text('description');
+            $table->integer('discount_percentage')->nullable();
+            $table->decimal('discount_amount', 10, 2)->nullable();
             $table->date('start_date');
-            $table->date('end_date')->nullable(); 
-            $table->timestamps(); 
+            $table->date('end_date');
+            $table->string('promotion_type');
+            $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
+    public function down()
     {
         Schema::dropIfExists('promotions');
     }
