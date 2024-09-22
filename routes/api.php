@@ -6,7 +6,7 @@ use App\Http\Controllers\apiProductController;
 use App\Http\Controllers\apiProductVariantController;
 use App\Http\Controllers\apiCategoryController;
 use App\Http\Controllers\AuthController;
-
+use App\Http\Controllers\PromotionController;
 Route::group([
     'middleware' => 'api',
     'prefix' => 'auth'
@@ -61,3 +61,7 @@ Route::get('/categories/{id}', [apiCategoryController::class, 'show']);
 Route::post('/categories', [apiCategoryController::class, 'store']);
 Route::put('/categories/{id}', [apiCategoryController::class, 'update']);
 Route::delete('/categories/{id}', [apiCategoryController::class, 'destroy']);
+
+Route::post('/promotion/create', [PromotionController::class, 'create']);
+Route::post('/promotion/check', [PromotionController::class, 'check']);
+Route::post('/promotion/apply', [PromotionController::class, 'apply']);
