@@ -104,13 +104,37 @@ class apiProductController extends Controller
 
     public function sortByPrice(Request $request)
     {
-        $priceOrder = $request->input('price', 'desc'); 
+        // Lấy tham số 'price' từ request, mặc định là 'asc'
+        $priceOrder = $request->input('price', 'asc');
+        $validOrders = ['asc', 'desc'];
 
-        $products = Product::with(['variants' => function($query) use ($priceOrder) {
-            $query->orderBy('price', $priceOrder);
-        }])->get();
+        if (!in_array($priceOrder, $validOrders)) {
+            return response()->json(['error' => 'Invalid price parameter'], 400);
+        }
 
-        return response()->json($products);
+        // Lấy sản phẩm và sắp xếp theo giá của biến thể (chỉ lấy những sản phẩm có biến thể)
+        $products = Product::with([
+            'variants' => function ($query) use ($priceOrder) {
+                $query->orderBy('price', $priceOrder);
+            }
+        ])->get()->filter(function ($product) {
+            // Loại bỏ sản phẩm không có biến thể
+            return $product->variants->isNotEmpty();
+        });
+
+        // Sắp xếp sản phẩm theo giá của biến thể
+        if ($priceOrder === 'asc') {
+            $sortedProducts = $products->sortBy(function ($product) {
+                return $product->variants->first()->price;
+            });
+        } else {
+            $sortedProducts = $products->sortByDesc(function ($product) {
+                return $product->variants->first()->price;
+            });
+        }
+
+        return response()->json($sortedProducts->values()->all());
     }
+
 
 }

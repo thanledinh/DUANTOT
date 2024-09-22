@@ -31,6 +31,7 @@ Route::get('/user', function (Request $request) {
 
 // Nhóm các route liên quan đến products
 Route::prefix('products')->group(function () {
+    Route::get('/sort', [apiProductController::class, 'sortByPrice']);
     Route::get('/', [apiProductController::class, 'index']);
     Route::get('/products_paginate', [apiProductController::class, 'products_paginate']);
     Route::get('/{id}', [apiProductController::class, 'show']);
@@ -38,7 +39,9 @@ Route::prefix('products')->group(function () {
     Route::put('/{id}', [apiProductController::class, 'update']);
     Route::delete('/{id}', [apiProductController::class, 'delete']);
     Route::get('/search/{query}', [apiProductController::class, 'search']);
-    Route::get('/sort', [apiProductController::class, 'sortByPrice']);
+  
+  
+});  
 
 
     // Nhóm các route liên quan đến variants của product
@@ -50,7 +53,7 @@ Route::prefix('products')->group(function () {
         Route::post('/', [apiProductVariantController::class, 'store']);
         Route::put('/{id}', [apiProductVariantController::class, 'update']);
         Route::delete('/{id}', [apiProductVariantController::class, 'delete']);
-    });
+    
 });
 
 Route::get('/categories', [apiCategoryController::class, 'index']);
