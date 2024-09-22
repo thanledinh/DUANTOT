@@ -15,7 +15,6 @@ class CreateCustomerSupportTable extends Migration
             $table->id('support_id'); 
             $table->unsignedBigInteger('user_id');
             $table->text('issue');
-            $table->text('response')->nullable(); 
             $table->string('status');
             $table->timestamps(); 
 
