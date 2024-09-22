@@ -17,7 +17,7 @@ Route::group([
     Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:api');
     Route::post('/refresh', [AuthController::class, 'refresh'])->middleware('auth:api');
     Route::post('/profile', [AuthController::class, 'profile'])->middleware('auth:api');
-    
+    Route::post('/change-password', [AuthController::class, 'changePassword'])->middleware('auth:api');
     // Route cho việc quên mật khẩu
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->name('password.email');
     
@@ -39,8 +39,6 @@ Route::prefix('products')->group(function () {
     Route::delete('/{id}', [apiProductController::class, 'delete']);
     Route::get('/search/{query}', [apiProductController::class, 'search']);
     Route::get('/sort', [apiProductController::class, 'sortByPrice']);
-
-
 
 
     // Nhóm các route liên quan đến variants của product
