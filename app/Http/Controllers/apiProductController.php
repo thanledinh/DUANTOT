@@ -8,7 +8,7 @@ use App\Models\ProductVariant;
 
 class apiProductController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $products = Product::with('variants')->get();
         return response()->json($products, 200);
@@ -86,4 +86,55 @@ class apiProductController extends Controller
         file_put_contents(public_path('images/products/') . $imageName, $imageData);
         return 'images/products/' . $imageName;
     }
+
+
+    public function products_paginate(Request $request)
+    {
+        $perPage = $request->input('per_page');
+        $totalProducts = Product::count();
+        if ($totalProducts > $perPage) {
+
+            $products = Product::paginate($perPage);
+        } else {
+            $products = Product::all();
+        }
+        return response()->json($products);
+    }
+
+
+    public function sortByPrice(Request $request)
+    {
+        // Lấy tham số 'price' từ request, mặc định là 'asc'
+        $priceOrder = $request->input('price', 'asc');
+        $validOrders = ['asc', 'desc'];
+
+        if (!in_array($priceOrder, $validOrders)) {
+            return response()->json(['error' => 'Invalid price parameter'], 400);
+        }
+
+        // Lấy sản phẩm và sắp xếp theo giá của biến thể (chỉ lấy những sản phẩm có biến thể)
+        $products = Product::with([
+            'variants' => function ($query) use ($priceOrder) {
+                $query->orderBy('price', $priceOrder);
+            }
+        ])->get()->filter(function ($product) {
+            // Loại bỏ sản phẩm không có biến thể
+            return $product->variants->isNotEmpty();
+        });
+
+        // Sắp xếp sản phẩm theo giá của biến thể
+        if ($priceOrder === 'asc') {
+            $sortedProducts = $products->sortBy(function ($product) {
+                return $product->variants->first()->price;
+            });
+        } else {
+            $sortedProducts = $products->sortByDesc(function ($product) {
+                return $product->variants->first()->price;
+            });
+        }
+
+        return response()->json($sortedProducts->values()->all());
+    }
+
+
 }
