@@ -47,7 +47,35 @@ class PromotionController extends Controller
     
         return response()->json($promotion, 200);
     }
-    
+    public function apply(Request $request)
+    {
+        $data = $request->validate([
+            'code' => 'required|string',
+            'order_amount' => 'required|numeric'
+        ]);
+         $current_time = Carbon::now();
+         $promotion = Promotion::where('code',$data['code'])
+         ->where('start_data','<=', $current_time)
+         ->where('end_data','>=', $current_time)
+         ->first();
+         if(!$promotion){
+            return response()->json([
+                'massage' => 'Mã khuyến mãi không hợp lệ hoặc đã hết hạn',
+            ],404);
+         } // nếu khuyến mãi là phần trăm thì giảm giá theo phần trăm còn khuyến mãi là số tiền cố định thì giảm là số tiền cố định
+         if($promotion->promotion_type === 'percentage'){
+            $discount = ($promotion->discount_percentage / 100) * $data['order_amount'];
+
+         }else {
+            $discount = $promotion->discount_amount;
+         }
+         $discount_amount = max(0,$data['order_amount'] - $discount);
+         return response()->json([
+            'original_amount'=> $data['order_amount'],
+            'discount' => $discount,
+            'discount_amount' => $discount_amount,
+         ],200);
+    }
 
 
 }
