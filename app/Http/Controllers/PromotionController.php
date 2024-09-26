@@ -1,81 +1,43 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\Promotion;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 
 class PromotionController extends Controller
 {
     public function create(Request $request)
     {
-        $data = $request->validate([
-            'code' => 'required|unique:promotions,code',
-            'description' => 'nullable|string',
-            'discount_percentage' => 'nullable|integer|min:0|max:100',
-            'discount_amount' => 'nullable|numeric',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after:start_date',
-            'promotion_type' => 'required|string',
-        ]);
-
-        $promotion = Promotion::create($data);
-        return response()->json($promotion, 201);
+        $promotion = Promotion::create($request->all());
+        return response()->json(['promotion' => $promotion], 201);
     }
-
     public function check(Request $request)
     {
-        $data = $request->validate([
-            'code' => 'required|string',
-        ]);
-    
-        $current_time = Carbon::now();
-        $promotion = Promotion::where('code', $data['code'])
-            ->where('start_date', '<=', $current_time)
-            ->where('end_date', '>=', $current_time)
+        $promotion = Promotion::where('code', $request->input('code'))
+            ->whereDate('start_date', '<=', now())
+            ->whereDate('end_date', '>=', now())
             ->first();
-    
-        if (!$promotion) {
-            return response()->json([
-                'message' => 'Mã khuyến mãi không hợp lệ hoặc đã hết hạn',
-                'current_time' => $current_time,
-                'promotion_start' => $promotion ? $promotion->start_date : null,
-                'promotion_end' => $promotion ? $promotion->end_date : null,
-            ], 404);
+        if ($promotion && $promotion->isValidForOrder($request->order)) {
+            return response()->json(['valid' => true, 'promotion' => $promotion]);
         }
-    
-        return response()->json($promotion, 200);
+        return response()->json(['valid' => false], 404);
     }
     public function apply(Request $request)
     {
-        $data = $request->validate([
-            'code' => 'required|string',
-            'order_amount' => 'required|numeric'
-        ]);
-         $current_time = Carbon::now();
-         $promotion = Promotion::where('code',$data['code'])
-         ->where('start_data','<=', $current_time)
-         ->where('end_data','>=', $current_time)
-         ->first();
-         if(!$promotion){
-            return response()->json([
-                'massage' => 'Mã khuyến mãi không hợp lệ hoặc đã hết hạn',
-            ],404);
-         } // nếu khuyến mãi là phần trăm thì giảm giá theo phần trăm còn khuyến mãi là số tiền cố định thì giảm là số tiền cố định
-         if($promotion->promotion_type === 'percentage'){
-            $discount = ($promotion->discount_percentage / 100) * $data['order_amount'];
-
-         }else {
-            $discount = $promotion->discount_amount;
-         }
-         $discount_amount = max(0,$data['order_amount'] - $discount);
-         return response()->json([
-            'original_amount'=> $data['order_amount'],
-            'discount' => $discount,
-            'discount_amount' => $discount_amount,
-         ],200);
+        $promotion = Promotion::where('code', $request->input('code'))->first();
+        if (!$promotion || !$promotion->isValidForOrder($request->order)) {
+            return response()->json(['error' => 'Mã khuyến mãi không hợp lệ'], 400);
+        }
+        //  giảm giá hoặc khuyến mãi khác cho đơn hàng
+        $order = $request->order;
+        if ($promotion->discount_percentage) {
+            $order->total -= ($order->total * $promotion->discount_percentage / 100);
+        } elseif ($promotion->discount_amount) {
+            $order->total -= $promotion->discount_amount;
+        }
+        if ($promotion->free_shipping) {
+            $order->shipping_fee = 0;
+        }
+        return response()->json(['order' => $order]);
     }
-
-
 }
