@@ -39,13 +39,11 @@ Route::prefix('products')->group(function () {
     Route::put('/{id}', [apiProductController::class, 'update']);
     Route::delete('/{id}', [apiProductController::class, 'delete']);
     Route::get('/search/{query}', [apiProductController::class, 'search']);
-  
-  
 });  
 
 
-    // Nhóm các route liên quan đến variants của product
-    Route::prefix('variants')->group(function () {
+// Nhóm các route liên quan đến variants của product
+Route::prefix('variants')->group(function () {
         Route::get('/', [apiProductVariantController::class, 'index']);
         Route::get('/product_id={product_id}', [apiProductVariantController::class, 'getProductsByProductId']);
         Route::get('/product_id={product_id}/variant_id={id}', [apiProductVariantController::class, 'getVariantByProductIdAndVariantId']);

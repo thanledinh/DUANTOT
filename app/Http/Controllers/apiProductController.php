@@ -28,6 +28,7 @@ class apiProductController extends Controller
             'type' => 'required|string|max:255',
             'brand' => 'required|string|max:255',
             'category_id' => 'required|integer|exists:categories,id',
+            'image' => 'nullable|string', // Đảm bảo rằng trường này là nullable
             'barcode' => 'nullable|string|max:255',
             'variants' => 'nullable|array',
             'variants.*.price' => 'required_with:variants|numeric',
@@ -38,25 +39,59 @@ class apiProductController extends Controller
             'variants.*.type' => 'nullable|string|max:255',
             'variants.*.image' => 'nullable|string',
         ]);
-
+    
+        // Xử lý hình ảnh sản phẩm nếu có
+        if (isset($validatedData['image'])) {
+            $validatedData['image'] = $this->handleImageUpload($validatedData['image'], 'product');
+        }
+    
         $product = Product::create($validatedData);
-
+    
         if (!empty($validatedData['variants'])) {
             foreach ($validatedData['variants'] as $variantData) {
                 if (isset($variantData['image'])) {
-                    $variantData['image'] = $this->handleImageUpload($variantData['image']);
+                    $variantData['image'] = $this->handleImageUpload($variantData['image'], 'variant');
                 }
                 $product->variants()->create($variantData);
             }
         }
-
+    
         return response()->json($product->load('variants'), 201);
     }
 
     public function update(Request $request, $id)
     {
         $product = Product::findOrFail($id);
-        $product->update($request->all());
+        $validatedData = $request->validate([
+            'name' => 'sometimes|required|string|max:255',
+            'description' => 'sometimes|required|string',
+            'type' => 'sometimes|required|string|max:255',
+            'brand' => 'sometimes|required|string|max:255',
+            'category_id' => 'sometimes|required|integer|exists:categories,id',
+            'image' => 'nullable|string',
+            'barcode' => 'nullable|string|max:255',
+            'variants' => 'nullable|array',
+        ]);
+    
+        // Xử lý hình ảnh sản phẩm nếu có
+        if (isset($validatedData['image'])) {
+            $validatedData['image'] = $this->handleImageUpload($validatedData['image'], 'product');
+        }
+    
+        $product->update($validatedData);
+    
+        if (!empty($validatedData['variants'])) {
+            foreach ($validatedData['variants'] as $variantData) {
+                if (isset($variantData['image'])) {
+                    $variantData['image'] = $this->handleImageUpload($variantData['image'], 'variant');
+                }
+                $product->variants()->updateOrCreate(
+                    ['id' => $variantData['id']], // Giả sử bạn có id của biến thể
+                    $variantData
+                );
+            }
+        }
+    
         return response()->json($product->load('variants'), 200);
     }
 
@@ -79,14 +114,23 @@ class apiProductController extends Controller
 
     private function handleImageUpload($imageData)
     {
+        // Tách phần type và dữ liệu base64
         list($type, $imageData) = explode(';', $imageData);
         list(, $imageData) = explode(',', $imageData);
+        
+        // Giải mã dữ liệu base64
         $imageData = base64_decode($imageData);
-        $imageName = time() . '.jpg';
-        file_put_contents(public_path('images/products/') . $imageName, $imageData);
+    
+        // Tạo tên file hình ảnh
+        $imageName = time() . '.jpg'; // Bạn có thể thay đổi định dạng nếu cần
+        $imagePath = public_path('images/products/') . $imageName;
+    
+        // Lưu hình ảnh vào thư mục
+        file_put_contents($imagePath, $imageData);
+    
+        // Trả về đường dẫn hình ảnh để lưu vào cơ sở dữ liệu
         return 'images/products/' . $imageName;
     }
-
 
     public function products_paginate(Request $request)
     {
