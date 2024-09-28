@@ -10,6 +10,7 @@ use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\FlashSaleController;
 use App\Http\Controllers\FlashSaleProductController;
 
+
 Route::group([
     'middleware' => 'api',
     'prefix' => 'auth'
@@ -21,10 +22,9 @@ Route::group([
     Route::post('/refresh', [AuthController::class, 'refresh'])->middleware('auth:api');
     Route::post('/profile', [AuthController::class, 'profile'])->middleware('auth:api');
     Route::post('/change-password', [AuthController::class, 'changePassword'])->middleware('auth:api');
-    // Route cho việc quên mật khẩu
+
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->name('password.email');
     
-    // Route cho việc đặt lại mật khẩu
     Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.reset');
 });
 
