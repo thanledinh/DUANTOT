@@ -15,6 +15,7 @@ class CreateOrderItemsTable extends Migration
             $table->unsignedBigInteger('variant_id');
             $table->integer('quantity');
             $table->decimal('price', 10, 2);
+            $table->boolean('sale')->default(false);
             $table->timestamps();
             $table->foreign('product_id')->references('id')->on('products')->onDelete('cascade');
             $table->foreign('order_id')->references('id')->on('orders')->onDelete('cascade');

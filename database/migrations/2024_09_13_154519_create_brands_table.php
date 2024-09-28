@@ -18,6 +18,10 @@ class CreateBrandsTable extends Migration
             $table->string('name'); 
             $table->timestamps(); 
         });
+        Schema::table('products', function (Blueprint $table) {
+            $table->unsignedBigInteger('brand_id')->nullable(); 
+            $table->foreign('brand_id')->references('id')->on('brands')->onDelete('cascade'); 
+        });
     }
 
     /**
@@ -27,6 +31,11 @@ class CreateBrandsTable extends Migration
      */
     public function down()
     {
+        Schema::table('products', function (Blueprint $table) {
+            $table->dropForeign(['brand_id']); 
+            $table->dropColumn('brand_id'); 
+        });
+
         Schema::dropIfExists('brands');
     }
 }
