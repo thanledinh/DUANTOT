@@ -15,8 +15,7 @@ class CreateShippingTable extends Migration
             $table->string('shipping_method');
             $table->decimal('shipping_cost', 10, 2);
             $table->string('shipping_status');
-            $table->timestamp('created_at')->nullable();
-
+            $table->timestamps();
             $table->foreign('order_id')->references('id')->on('orders')->onDelete('cascade');
         });
     }
