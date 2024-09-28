@@ -40,6 +40,10 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+        'api' => [
+            'driver' => 'jwt', // hoặc 'passport' nếu bạn đang sử dụng Laravel Passport
+            'provider' => 'users',
+        ],
     ],
 
     /*

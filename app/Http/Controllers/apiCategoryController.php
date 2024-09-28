@@ -7,65 +7,70 @@ use App\Models\Category;
 
 class apiCategoryController extends Controller
 {
-    // Lấy danh sách tất cả các category
+    // Lấy danh sách tất cả các category cùng với subcategories
     public function index()
     {
-        return Category::all();
+        $categories = Category::whereNull('parent_id')->get();
+
+        foreach ($categories as $category) {
+            $category->subcategories = Category::where('parent_id', $category->id)->get();
+        }
+
+        return response()->json($categories);
     }
 
     // Tạo mới một category
-
-
     public function store(Request $request)
     {
         $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'image' => 'nullable|string', // Now the image is a Base64 string
+            'image' => 'nullable|string',
+            'parent_id' => 'nullable|integer|exists:categories,id', // Thêm validation cho parent_id
         ]);
-    
+
         $imagePath = null;
-    
+
         if ($request->image) {
-            // Decode Base64 string
-            $imageData = $request->image;
-            $imageName = uniqid() . '.jpg';
-            $imagePath = 'images/category/' . $imageName;
-    
-            // Save the image to the public directory
-            file_put_contents(public_path($imagePath), base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $imageData)));
+            $imagePath = $this->handleImageUpload($request->image, 'category');
         }
-    
+
         $category = new Category([
             'name' => $request->name,
             'description' => $request->description,
-            'image' => $imagePath, // Save the image path in the database
+            'image' => $imagePath,
+            'parent_id' => $request->parent_id, // Lưu parent_id
         ]);
-    
+
         $category->save();
-    
+
         return response()->json(['message' => 'Category created successfully', 'category' => $category], 201);
     }
-    
-    
 
-    // Lấy thông tin chi tiết một category
+    // Lấy thông tin một category theo ID
     public function show($id)
     {
-        $category = Category::find($id);
-
+        $category = Category::find($id); // Lấy category theo ID
         if (!$category) {
             return response()->json(['message' => 'Category not found'], 404);
         }
+        return response()->json($category);
+    }
 
-        return $category;
+    // Lấy thông tin chi tiết một category bao gồm subcategories
+    public function showFull($id)
+    {
+        $category = Category::with('subcategories')->find($id); // Lấy category cùng với subcategories
+        if (!$category) {
+            return response()->json(['message' => 'Category not found'], 404);
+        }
+        return response()->json($category);
     }
 
     // Cập nhật thông tin một category
     public function update(Request $request, $id)
     {
         $category = Category::find($id);
-
         if (!$category) {
             return response()->json(['message' => 'Category not found'], 404);
         }
@@ -74,11 +79,19 @@ class apiCategoryController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'image' => 'nullable|string',
+            'parent_id' => 'nullable|integer|exists:categories,id', // Thêm validation cho parent_id
         ]);
 
+        // Xử lý upload hình ảnh nếu có
+        if ($request->image) {
+            $imagePath = $this->handleImageUpload($request->image, 'category'); // Gọi hàm upload hình ảnh
+            $category->image = $imagePath; // Lưu tên hình ảnh vào cơ sở dữ liệu
+        }
+
+        // Cập nhật các trường khác
         $category->name = $request->name;
         $category->description = $request->description;
-        $category->image = $request->image;
+        $category->parent_id = $request->parent_id; // Cập nhật parent_id
         $category->save();
 
         return response()->json(['message' => 'Category updated successfully', 'category' => $category]);
@@ -88,13 +101,19 @@ class apiCategoryController extends Controller
     public function destroy($id)
     {
         $category = Category::find($id);
-
         if (!$category) {
             return response()->json(['message' => 'Category not found'], 404);
         }
-
         $category->delete();
-
         return response()->json(['message' => 'Category deleted successfully']);
+    }
+
+    // Hàm xử lý upload hình ảnh
+    private function handleImageUpload($imageData, $type)
+    {
+        $imageName = uniqid() . '.jpg';
+        $imagePath = "images/{$type}/" . $imageName;
+        file_put_contents(public_path($imagePath), base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $imageData)));
+        return $imagePath;
     }
 }

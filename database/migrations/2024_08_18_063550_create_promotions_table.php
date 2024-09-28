@@ -6,28 +6,27 @@ use Illuminate\Support\Facades\Schema;
 
 class CreatePromotionsTable extends Migration
 {
-    /**
-     * Run the migrations.
-     */
-    public function up(): void
+    public function up()
     {
         Schema::create('promotions', function (Blueprint $table) {
-            $table->id(); 
-            $table->string('code')->unique(); 
-            $table->string('description')->nullable(); 
-            $table->decimal('discount_percentage', 5, 2)->nullable(); 
-            $table->decimal('discount_amount', 10, 2)->nullable(); 
-            $table->string('promotion_type'); 
+            $table->id();
+            $table->string('code');
+            $table->text('description');
+            $table->integer('discount_percentage')->nullable();
+            $table->decimal('discount_amount', 10, 2)->nullable();
+            $table->decimal('minimum_order_value', 10, 2)->nullable();  // giá trị tối thiểu của đơn hàng
+            $table->string('applicable_products')->nullable();  // danh sách các sản phẩm/danh mục áp dụng
+            $table->integer('min_quantity')->nullable();  // số lượng tối thiểu của sản phẩm
+            $table->boolean('free_shipping')->default(false);  // miễn phí vận chuyển
+            $table->boolean('is_member_only')->default(false);  // chỉ dành cho khách hàng thành viên
             $table->date('start_date');
-            $table->date('end_date')->nullable(); 
-            $table->timestamps(); 
+            $table->date('end_date');
+            $table->string('promotion_type');
+            $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
+    public function down()
     {
         Schema::dropIfExists('promotions');
     }

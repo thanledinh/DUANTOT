@@ -9,10 +9,22 @@ class Category extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'description', 'image'];
+    protected $fillable = [
+        'name',
+        'description',
+        'image',
+        'parent_id',
+    ];
 
-    public function products()
+    // Mối quan hệ với subcategories
+    public function subcategories()
     {
-        return $this->hasMany(Product::class);
+        return $this->hasMany(Category::class, 'parent_id');
+    }
+
+    // Mối quan hệ với category cha
+    public function parent()
+    {
+        return $this->belongsTo(Category::class, 'parent_id');
     }
 }
