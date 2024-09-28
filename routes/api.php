@@ -10,6 +10,7 @@ use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\FlashSaleController;
 use App\Http\Controllers\FlashSaleProductController;
 
+
 Route::group([
     'middleware' => 'api',
     'prefix' => 'auth'
@@ -21,10 +22,9 @@ Route::group([
     Route::post('/refresh', [AuthController::class, 'refresh'])->middleware('auth:api');
     Route::post('/profile', [AuthController::class, 'profile'])->middleware('auth:api');
     Route::post('/change-password', [AuthController::class, 'changePassword'])->middleware('auth:api');
-    // Route cho việc quên mật khẩu
+
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->name('password.email');
     
-    // Route cho việc đặt lại mật khẩu
     Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.reset');
 });
 
@@ -42,13 +42,11 @@ Route::prefix('products')->group(function () {
     Route::put('/{id}', [apiProductController::class, 'update']);
     Route::delete('/{id}', [apiProductController::class, 'delete']);
     Route::get('/search/{query}', [apiProductController::class, 'search']);
-  
-  
 });  
 
 
-    // Nhóm các route liên quan đến variants của product
-    Route::prefix('variants')->group(function () {
+// Nhóm các route liên quan đến variants của product
+Route::prefix('variants')->group(function () {
         Route::get('/', [apiProductVariantController::class, 'index']);
         Route::get('/product_id={product_id}', [apiProductVariantController::class, 'getProductsByProductId']);
         Route::get('/product_id={product_id}/variant_id={id}', [apiProductVariantController::class, 'getVariantByProductIdAndVariantId']);
