@@ -7,6 +7,9 @@ use App\Http\Controllers\apiProductVariantController;
 use App\Http\Controllers\apiCategoryController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PromotionController;
+use App\Http\Controllers\FlashSaleController;
+use App\Http\Controllers\FlashSaleProductController;
+
 Route::group([
     'middleware' => 'api',
     'prefix' => 'auth'
@@ -63,3 +66,12 @@ Route::delete('/categories/{id}', [apiCategoryController::class, 'destroy']);
 Route::post('/promotion/create', [PromotionController::class, 'create']);
 Route::post('/promotion/check', [PromotionController::class, 'check']);
 Route::post('/promotion/apply', [PromotionController::class, 'apply']);
+
+
+
+Route::get('flash-sales', [FlashSaleController::class, 'index'])->name('flash-sales.index');
+Route::get('flash-sales/{id}', [FlashSaleController::class, 'show'])->name('flash-sales.show');
+Route::post('flash-sales', [FlashSaleController::class, 'store'])->name('flash-sales.store');
+Route::put('flash-sales/{id}', [FlashSaleController::class, 'update'])->name('flash-sales.update');
+Route::patch('flash-sales/{id}', [FlashSaleController::class, 'update'])->name('flash-sales.update');
+Route::delete('flash-sales/{id}', [FlashSaleController::class, 'destroy'])->name('flash-sales.destroy');
