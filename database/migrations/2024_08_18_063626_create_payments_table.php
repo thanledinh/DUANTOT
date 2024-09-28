@@ -12,9 +12,7 @@ class CreatePaymentsTable extends Migration
             $table->id();
             $table->unsignedBigInteger('order_id');
             $table->string('payment_method');
-            $table->string('payment_status');
-            $table->timestamp('created_at')->nullable();
-
+            $table->timestamps();
             $table->foreign('order_id')->references('id')->on('orders')->onDelete('cascade');
         });
     }

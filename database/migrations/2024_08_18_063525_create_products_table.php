@@ -13,10 +13,9 @@ class CreateProductsTable extends Migration
             $table->string('name');
             $table->string('image');
             $table->string('type');
-            $table->string('brand');
             $table->unsignedBigInteger('category_id');
             $table->timestamps();
-
+            $table->boolean('sale')->default(false);
             $table->foreign('category_id')->references('id')->on('categories')->onDelete('cascade');
         });
     }

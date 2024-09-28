@@ -16,7 +16,6 @@ class CreateUserPromotionsTable extends Migration
             $table->unsignedBigInteger('user_id'); 
             $table->unsignedBigInteger('promotion_id'); 
             $table->timestamps(); 
-
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->foreign('promotion_id')->references('id')->on('promotions')->onDelete('cascade');
         });

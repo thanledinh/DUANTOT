@@ -18,12 +18,11 @@ class CreateProductVariantsTable extends Migration
             $table->string('size');
             $table->string('flavor');
             $table->integer('stock_quantity');
+            $table->boolean('sale')->default(false);
             $table->timestamps();
-
             $table->foreign('product_id')->references('id')->on('products')->onDelete('cascade');
         });
     }
-
     public function down()
     {
         Schema::dropIfExists('product_variants');
