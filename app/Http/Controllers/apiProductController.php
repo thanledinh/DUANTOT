@@ -27,18 +27,18 @@ class apiProductController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'required|string',
             'type' => 'required|string|max:255',
-            'brand' => 'required|string|max:255',
+            'brand_id' => 'sometimes|required|integer|exists:brands,id',
             'category_id' => 'required|integer|exists:categories,id',
             'image' => 'nullable|string', // Đảm bảo trường này là nullable
             'barcode' => 'nullable|string|max:255',
             'variants' => 'nullable|array',
             'variants.*.price' => 'required_with:variants|numeric',
             'variants.*.stock_quantity' => 'required_with:variants|integer',
-            'variants.*.weight' => 'nullable|numeric',
             'variants.*.size' => 'nullable|string|max:255',
             'variants.*.flavor' => 'nullable|string|max:255',
             'variants.*.type' => 'nullable|string|max:255',
             'variants.*.image' => 'nullable|string',
+            'variants.*.sale' => 'nullable|numeric',
         ]);
     
         // Xử lý hình ảnh sản phẩm nếu có
@@ -76,7 +76,7 @@ class apiProductController extends Controller
             'name' => 'sometimes|required|string|max:255',
             'description' => 'sometimes|required|string',
             'type' => 'sometimes|required|string|max:255',
-            'brand' => 'sometimes|required|string|max:255',
+            'brand_id' => 'required|integer|exists:brands,id',
             'category_id' => 'sometimes|required|integer|exists:categories,id',
             'image' => 'nullable|string',
             'barcode' => 'nullable|string|max:255',

@@ -12,17 +12,17 @@ class CreateProductVariantsTable extends Migration
             $table->id();
             $table->unsignedBigInteger('product_id');
             $table->decimal('price', 10, 2);
-            $table->string('image');
-            $table->string('type');
-            $table->string('weight');
-            $table->string('size');
-            $table->string('flavor');
+            $table->string('image')->nullable(); // Cho phép giá trị null
+            $table->string('type')->nullable(); // Cho phép giá trị null
+            $table->string('size')->nullable(); // Cho phép giá trị null
+            $table->string('flavor')->nullable(); // Cho phép giá trị null
             $table->integer('stock_quantity');
             $table->boolean('sale')->default(false);
             $table->timestamps();
             $table->foreign('product_id')->references('id')->on('products')->onDelete('cascade');
         });
     }
+
     public function down()
     {
         Schema::dropIfExists('product_variants');

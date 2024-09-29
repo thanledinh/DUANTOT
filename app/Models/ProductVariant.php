@@ -13,7 +13,6 @@ class ProductVariant extends Model
         'product_id',
         'price',
         'stock_quantity',
-        'weight',
         'size',
         'flavor',
         'type',

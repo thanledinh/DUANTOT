@@ -37,6 +37,7 @@ class apiProductVariantController extends Controller
             'size' => 'nullable|string|max:255',
             'flavor' => 'nullable|string|max:255',
             'image' => 'nullable|string',
+            'sale' => 'nullable|numeric',
         ]);
 
         if (!empty($validatedData['image'])) {
@@ -55,6 +56,7 @@ class apiProductVariantController extends Controller
             'size' => 'nullable|string|max:255',
             'flavor' => 'nullable|string|max:255',
             'image' => 'nullable|string',
+            'sale' => 'nullable|numeric',
         ]);
 
         $product = ProductVariant::findOrFail($id);

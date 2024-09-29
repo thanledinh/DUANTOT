@@ -9,7 +9,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\FlashSaleController;
 use App\Http\Controllers\FlashSaleProductController;
-
+use App\Http\Controllers\apiBrandController;
 
 Route::group([
     'middleware' => 'api',
@@ -75,3 +75,10 @@ Route::post('flash-sales', [FlashSaleController::class, 'store'])->name('flash-s
 Route::put('flash-sales/{id}', [FlashSaleController::class, 'update'])->name('flash-sales.update');
 Route::patch('flash-sales/{id}', [FlashSaleController::class, 'update'])->name('flash-sales.update');
 Route::delete('flash-sales/{id}', [FlashSaleController::class, 'destroy'])->name('flash-sales.destroy');
+
+Route::get('/brands', [apiBrandController::class, 'index']);
+Route::get('/brands/{id}', [apiBrandController::class, 'show']);
+Route::post('/brands', [apiBrandController::class, 'store']);
+Route::put('/brands/{id}', [apiBrandController::class, 'update']);
+Route::delete('/brands/{id}', [apiBrandController::class, 'destroy']);
+
