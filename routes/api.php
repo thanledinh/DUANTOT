@@ -21,15 +21,11 @@ Route::group([
     Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:api');
     Route::post('/refresh', [AuthController::class, 'refresh'])->middleware('auth:api');
     Route::post('/profile', [AuthController::class, 'profile'])->middleware('auth:api');
-<<<<<<< Updated upstream
     Route::post('/change-password', [AuthController::class, 'changePassword'])->middleware('auth:api');
 
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->name('password.email');
-    
+
     Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.reset');
-=======
-    Route::post('/updatecontactinfo', [AuthController::class, 'updateContactInfo'])->middleware('auth:api');
->>>>>>> Stashed changes
 });
 
 Route::get('/user', function (Request $request) {
@@ -46,7 +42,7 @@ Route::prefix('products')->group(function () {
     Route::put('/{id}', [apiProductController::class, 'update']);
     Route::delete('/{id}', [apiProductController::class, 'delete']);
     Route::get('/search/{query}', [apiProductController::class, 'search']);
-});  
+});
 
 
 // Nhóm các route liên quan đến variants của product
@@ -58,7 +54,7 @@ Route::prefix('variants')->group(function () {
         Route::post('/', [apiProductVariantController::class, 'store']);
         Route::put('/{id}', [apiProductVariantController::class, 'update']);
         Route::delete('/{id}', [apiProductVariantController::class, 'delete']);
-    
+
 });
 
 Route::get('/categories', [apiCategoryController::class, 'index']);
