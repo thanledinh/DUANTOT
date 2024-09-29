@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use App\Models\User;
+<<<<<<< Updated upstream
 
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -14,6 +15,9 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+=======
+use Illuminate\Support\Facades\Hash; // Add this line
+>>>>>>> Stashed changes
 
 class AuthController extends BaseController
 {
@@ -131,7 +135,10 @@ class AuthController extends BaseController
 
         return $this->createNewToken($token);
     }
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
     protected function createNewToken($token)
     {
         return $this->sendResponse([
