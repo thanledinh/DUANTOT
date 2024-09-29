@@ -170,7 +170,7 @@ class apiProductController extends Controller
         $pageNumber = $request->input('pageNumber', 1); // Mặc định là 1 nếu không có tham số
     
         // Phân trang sản phẩm
-        $products = Product::paginate($pageSize, ['*'], 'page', $pageNumber);
+        $products = Product::with('variants')->paginate($pageSize, ['*'], 'page', $pageNumber);
     
         return response()->json($products);
     }
