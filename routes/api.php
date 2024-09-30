@@ -84,5 +84,9 @@ Route::put('/brands/{id}', [apiBrandController::class, 'update']);
 Route::delete('/brands/{id}', [apiBrandController::class, 'destroy']);
 
 
-Route::post('/cart/add', [OrderController::class, 'addToCart']);
-Route::post('/cart/checkout', [OrderController::class, 'checkout']);
+
+Route::get('/orders', [OrderController::class, 'index']);       
+Route::get('/orders/{id}', [OrderController::class, 'show']);    
+Route::post('/orders', [OrderController::class, 'store']);       
+Route::put('/orders/{id}', [OrderController::class, 'update']);  
+Route::delete('/orders/{id}', [OrderController::class, 'destroy']);  
