@@ -166,14 +166,12 @@ class apiProductController extends Controller
 
     public function products_paginate(Request $request)
     {
-        $perPage = $request->input('per_page');
-        $totalProducts = Product::count();
-        if ($totalProducts > $perPage) {
-
-            $products = Product::paginate($perPage);
-        } else {
-            $products = Product::all();
-        }
+        $pageSize = $request->input('pageSize', 10); // Mặc định là 10 nếu không có tham số
+        $pageNumber = $request->input('pageNumber', 1); // Mặc định là 1 nếu không có tham số
+    
+        // Phân trang sản phẩm
+        $products = Product::with('variants')->paginate($pageSize, ['*'], 'page', $pageNumber);
+    
         return response()->json($products);
     }
 
