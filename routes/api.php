@@ -10,6 +10,7 @@ use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\FlashSaleController;
 use App\Http\Controllers\FlashSaleProductController;
 use App\Http\Controllers\apiBrandController;
+use App\Http\Controllers\OrderController;
 
 Route::group([
     'middleware' => 'api',
@@ -82,3 +83,10 @@ Route::post('/brands', [apiBrandController::class, 'store']);
 Route::put('/brands/{id}', [apiBrandController::class, 'update']);
 Route::delete('/brands/{id}', [apiBrandController::class, 'destroy']);
 
+
+
+Route::get('/orders', [OrderController::class, 'index']);       
+Route::get('/orders/{id}', [OrderController::class, 'show']);    
+Route::post('/orders', [OrderController::class, 'store']);       
+Route::put('/orders/{id}', [OrderController::class, 'update']);  
+Route::delete('/orders/{id}', [OrderController::class, 'destroy']);  
