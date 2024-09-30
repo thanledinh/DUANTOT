@@ -9,6 +9,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\FlashSaleController;
 use App\Http\Controllers\FlashSaleProductController;
+use App\Http\Controllers\apiWishlistController;
 use App\Http\Controllers\apiBrandController;
 
 Route::group([
@@ -26,11 +27,22 @@ Route::group([
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->name('password.email');
 
     Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.reset');
+
+
+});
+
+
+Route::middleware(['auth:api', 'custom_throttle:5,1'])->group(function () {
+    Route::post('/favorites', [apiWishlistController::class, 'store']); // Thêm sản phẩm yêu thích
+    Route::get('/favorites', [apiWishlistController::class, 'index']);  // Lấy danh sách yêu thích của người dùng
+    Route::delete('/favorites/{id}', [apiWishlistController::class, 'destroy']);
 });
 
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
+
+
 
 // Nhóm các route liên quan đến products
 Route::prefix('products')->group(function () {
@@ -42,18 +54,19 @@ Route::prefix('products')->group(function () {
     Route::put('/{id}', [apiProductController::class, 'update']);
     Route::delete('/{id}', [apiProductController::class, 'delete']);
     Route::get('/search/{query}', [apiProductController::class, 'search']);
+    Route::get('/{id}/related', [apiProductController::class, 'relatedProducts']);
 });
 
 
 // Nhóm các route liên quan đến variants của product
 Route::prefix('variants')->group(function () {
-        Route::get('/', [apiProductVariantController::class, 'index']);
-        Route::get('/product_id={product_id}', [apiProductVariantController::class, 'getProductsByProductId']);
-        Route::get('/product_id={product_id}/variant_id={id}', [apiProductVariantController::class, 'getVariantByProductIdAndVariantId']);
-        Route::get('/{id}', [apiProductVariantController::class, 'show']);
-        Route::post('/', [apiProductVariantController::class, 'store']);
-        Route::put('/{id}', [apiProductVariantController::class, 'update']);
-        Route::delete('/{id}', [apiProductVariantController::class, 'delete']);
+    Route::get('/', [apiProductVariantController::class, 'index']);
+    Route::get('/product_id={product_id}', [apiProductVariantController::class, 'getProductsByProductId']);
+    Route::get('/product_id={product_id}/variant_id={id}', [apiProductVariantController::class, 'getVariantByProductIdAndVariantId']);
+    Route::get('/{id}', [apiProductVariantController::class, 'show']);
+    Route::post('/', [apiProductVariantController::class, 'store']);
+    Route::put('/{id}', [apiProductVariantController::class, 'update']);
+    Route::delete('/{id}', [apiProductVariantController::class, 'delete']);
 
 });
 
