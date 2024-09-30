@@ -25,8 +25,8 @@ class apiProductController extends Controller
         // Validate input
         $validatedData = $request->validate([
             'name' => 'required|string|max:255',
-            'description' => 'required|string',
-            'type' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'type' => 'nullable|string|max:255',
             'brand_id' => 'sometimes|required|integer|exists:brands,id',
             'category_id' => 'required|integer|exists:categories,id',
             'image' => 'nullable|string', // Đảm bảo trường này là nullable
@@ -208,6 +208,21 @@ class apiProductController extends Controller
         }
 
         return response()->json($sortedProducts->values()->all());
+    }
+
+
+    public function relatedProducts($id)
+    {
+        // Lấy sản phẩm hiện tại
+        $product = Product::findOrFail($id);
+
+        // Lấy các sản phẩm liên quan dựa trên danh mục
+        $relatedProducts = Product::where('category_id', $product->category_id)
+            ->where('id', '!=', $product->id) // Loại bỏ sản phẩm hiện tại
+            ->take(6) // Giới hạn số lượng sản phẩm liên quan
+            ->get();
+
+        return response()->json($relatedProducts);
     }
 
 

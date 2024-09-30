@@ -14,7 +14,7 @@ class CreateProductsTable extends Migration
             $table->string('image');
             $table->string('type');
             $table->unsignedBigInteger('category_id');
-            $table->text('description')->nullable(); // Thêm cột description
+            $table->text('description')->nullable(); 
             $table->timestamps();
             $table->boolean('sale')->default(false);
             $table->foreign('category_id')->references('id')->on('categories')->onDelete('cascade');
