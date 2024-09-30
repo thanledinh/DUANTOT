@@ -11,6 +11,7 @@ use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 class User extends Authenticatable implements JWTSubject
 {
     use HasFactory, Notifiable;
+    protected $table = 'users';
 
     /**
      * The attributes that are mass assignable.
@@ -56,4 +57,14 @@ class User extends Authenticatable implements JWTSubject
     {
         return [];
     }
+
+    public function wishlists()
+    {
+        return $this->hasMany(Wishlist::class);
+    }
+
+    /**
+     * Quan hệ với các sản phẩm đã yêu thích
+     */
+   
 }
