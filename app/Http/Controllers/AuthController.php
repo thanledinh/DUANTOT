@@ -45,12 +45,17 @@ class AuthController extends BaseController
     public function login(Request $request)
     {
         $credentials = $request->only('email', 'password');
-
+    
         if (!$token = auth('api')->attempt($credentials)) {
-            return $this->sendError('Unauthorized', ['error' => 'Unauthorized']);
+            return response()->json(['message' => 'Unauthorized', 'error' => 'Unauthorized'], 401);
         }
+    
+        // Authenticate the user
+        $user = auth();
+    
         $success['token'] = $token;
-        return $this->sendResponse($success, 'User login successfully');
+        $success['user'] = $user;
+        return response()->json(['success' => $success, 'message' => 'User login successfully'], 200);
     }
 
     public function logout()
@@ -137,7 +142,7 @@ class AuthController extends BaseController
             'access_token' => $token,
             'token_type' => 'bearer',
             'expires_in' => auth()->factory()->getTTL() * 60,
-            'user' => auth()->user()
+            'user' => auth()->user(),
         ], 'Admin logged in successfully');
     }
 
