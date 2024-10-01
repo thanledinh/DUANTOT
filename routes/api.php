@@ -98,9 +98,9 @@ Route::delete('/brands/{id}', [apiBrandController::class, 'destroy']);
 
 
 
-Route::middleware(['auth:api','orders'])->group(function () {
+Route::middleware(['auth:api', 'orders'])->group(function () {
     Route::get('orders', [OrderController::class, 'index']);
-     Route::post('orders', [OrderController::class, 'store']);
+    Route::post('orders', [OrderController::class, 'store']);
     Route::get('orders/{order_id}', [OrderController::class, 'show']);
     Route::put('orders/{order_id}', [OrderController::class, 'update']);
     Route::delete('orders/{order_id}', [OrderController::class, 'destroy']);

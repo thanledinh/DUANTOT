@@ -1,11 +1,9 @@
 <?php
-
 namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth as FacadesAuth;
 
 class OrdersMiddleware
 {
@@ -18,8 +16,9 @@ class OrdersMiddleware
      */
     public function handle(Request $request, Closure $next)
     {
-        if (Auth::user()) {
-            return response()->json(['message' => 'Unauthorized.'], 403);
+        if (!auth('api')->check()) {
+            // Return a response indicating the user is authenticated
+            return response()->json(['message' => 'Authorized', 'user' => auth('api')->user()], 200);
         }
     
         return $next($request);
