@@ -17,7 +17,6 @@ class OrdersMiddleware
     public function handle(Request $request, Closure $next)
     {
         if (!auth('api')->check()) {
-            // Return a response indicating the user is authenticated
             return response()->json(['message' => 'Authorized', 'user' => auth('api')->user()], 200);
         }
     

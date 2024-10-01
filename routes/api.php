@@ -12,6 +12,7 @@ use App\Http\Controllers\FlashSaleProductController;
 use App\Http\Controllers\apiWishlistController;
 use App\Http\Controllers\apiBrandController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\API\OrderItemController;
 
 Route::group([
     'middleware' => 'api',
@@ -104,4 +105,5 @@ Route::middleware(['auth:api', 'orders'])->group(function () {
     Route::get('orders/{order_id}', [OrderController::class, 'show']);
     Route::put('orders/{order_id}', [OrderController::class, 'update']);
     Route::delete('orders/{order_id}', [OrderController::class, 'destroy']);
+    Route::get('order-items/{orderId}', [OrderItemController::class, 'showOrderItems']);
 });
