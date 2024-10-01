@@ -43,20 +43,26 @@ class AuthController extends BaseController
     }
 
     public function login(Request $request)
-    {
-        $credentials = $request->only('email', 'password');
+{
+    $credentials = $request->only('email', 'password');
 
-        if (!$token = auth('api')->attempt($credentials)) {
-            return $this->sendError('Unauthorized', ['error' => 'Unauthorized']);
-        }
-        $success['token'] = $token;
-        return $this->sendResponse($success, 'User login successfully');
+    if (!$token = auth('api')->attempt($credentials)) {
+        return response()->json(['message' => 'Unauthorized', 'error' => 'Unauthorized'], 401);
     }
 
+    $user = User::where('email', $request->email)->first();
+
+    $success['token'] = $token;
+    $success['user'] = $user;
+    return response()->json(['success' => $success, 'message' => 'User login successfully'], 200);
+}
+
     public function logout()
-    {
+    {   
+
         $success = auth('api')->logout();
         return $this->sendResponse($success, 'User logout successfully');
+        
     }
 
     public function refresh()
@@ -126,6 +132,7 @@ class AuthController extends BaseController
         $user = auth('api')->user();
         if ($user->user_type !== 'admin') {
             auth('api')->logout();
+       
             return $this->sendError('Unauthorized', ['error' => 'You are not authorized to access this area'], 403);
         }
 
@@ -137,7 +144,7 @@ class AuthController extends BaseController
             'access_token' => $token,
             'token_type' => 'bearer',
             'expires_in' => auth()->factory()->getTTL() * 60,
-            'user' => auth()->user()
+            'user' => auth()->user(),
         ], 'Admin logged in successfully');
     }
 
