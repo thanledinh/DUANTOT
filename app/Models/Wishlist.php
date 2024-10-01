@@ -9,21 +9,16 @@ class Wishlist extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'variant_id'];
+    protected $fillable = ['user_id', 'product_id']; // Chỉ định 'product_id' thay vì 'variant_id'
 
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
-    public function variant()
-    {
-        return $this->belongsTo(ProductVariant::class, 'variant_id'); // Thêm tham số 'variant_id' nếu cần
-    }
-
     public function product()
     {
-        // Sử dụng quan hệ 'variant' để truy xuất 'product'
-        return $this->hasOneThrough(Product::class, ProductVariant::class, 'id', 'id', 'variant_id', 'product_id');
+        // Sử dụng quan hệ 'product' để truy xuất 'product'
+        return $this->belongsTo(Product::class, 'product_id'); // Chỉ định rõ ràng quan hệ với bảng products
     }
 }
