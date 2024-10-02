@@ -83,8 +83,8 @@ class AuthController extends BaseController
     public function updateContactInfo(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'address' => 'sometimes|string|max:255',
-            'phone_number' => 'sometimes|string|max:20',
+            'address' => 'nullable|string|max:255', // Cho phép null
+            'phone_number' => 'nullable|string|max:20', // Cho phép null
         ]);
 
         if ($validator->fails()) {
@@ -95,12 +95,10 @@ class AuthController extends BaseController
         $updated = false;
 
         if ($request->has('address')) {
-            $user->address = $request->address;
+            $user->address = $request->address; // Cập nhật địa chỉ
             $updated = true;
-        }
-
-        if ($request->has('phone_number')) {
-            $user->phone_number = $request->phone_number;
+        } elseif ($request->has('phone_number')) {
+            $user->phone_number = $request->phone_number; // Cập nhật số điện thoại
             $updated = true;
         }
 
@@ -108,7 +106,7 @@ class AuthController extends BaseController
             $user->save();
             return $this->sendResponse($user, 'Contact information updated successfully.');
         } else {
-            return $this->sendError('No information provided for update.', [], 400);
+            return $this->sendError('No information provided for update. Please provide at least one field to update.', [], 400); // Thêm thông báo lỗi
         }
     }
 
