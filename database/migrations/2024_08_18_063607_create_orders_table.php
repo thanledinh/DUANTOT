@@ -17,9 +17,6 @@ class CreateOrdersTable extends Migration
             $table->string('status');
             $table->string('payment_method');
             $table->decimal('sale', 10, 2)->nullable();
-            $table->string('address');
-            $table->string('phone');
-            $table->text('note')->nullable();
             $table->timestamps();
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->foreign('id_promotion')->references('id')->on('promotions')->onDelete('set null');
