@@ -43,20 +43,26 @@ class AuthController extends BaseController
     }
 
     public function login(Request $request)
-    {
-        $credentials = $request->only('email', 'password');
+{
+    $credentials = $request->only('email', 'password');
 
-        if (!$token = auth('api')->attempt($credentials)) {
-            return $this->sendError('Unauthorized', ['error' => 'Unauthorized']);
-        }
-        $success['token'] = $token;
-        return $this->sendResponse($success, 'User login successfully');
+    if (!$token = auth('api')->attempt($credentials)) {
+        return response()->json(['message' => 'Unauthorized', 'error' => 'Unauthorized'], 401);
     }
 
+    $user = User::where('email', $request->email)->first();
+
+    $success['token'] = $token;
+    $success['user'] = $user;
+    return response()->json(['success' => $success, 'message' => 'User login successfully'], 200);
+}
+
     public function logout()
-    {
+    {   
+
         $success = auth('api')->logout();
         return $this->sendResponse($success, 'User logout successfully');
+        
     }
 
     public function refresh()
@@ -77,8 +83,8 @@ class AuthController extends BaseController
     public function updateContactInfo(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'address' => 'sometimes|string|max:255',
-            'phone_number' => 'sometimes|string|max:20',
+            'address' => 'nullable|string|max:255', // Cho phép null
+            'phone_number' => 'nullable|string|max:20', // Cho phép null
         ]);
 
         if ($validator->fails()) {
@@ -89,12 +95,10 @@ class AuthController extends BaseController
         $updated = false;
 
         if ($request->has('address')) {
-            $user->address = $request->address;
+            $user->address = $request->address; // Cập nhật địa chỉ
             $updated = true;
-        }
-
-        if ($request->has('phone_number')) {
-            $user->phone_number = $request->phone_number;
+        } elseif ($request->has('phone_number')) {
+            $user->phone_number = $request->phone_number; // Cập nhật số điện thoại
             $updated = true;
         }
 
@@ -102,7 +106,7 @@ class AuthController extends BaseController
             $user->save();
             return $this->sendResponse($user, 'Contact information updated successfully.');
         } else {
-            return $this->sendError('No information provided for update.', [], 400);
+            return $this->sendError('No information provided for update. Please provide at least one field to update.', [], 400); // Thêm thông báo lỗi
         }
     }
 
@@ -126,6 +130,7 @@ class AuthController extends BaseController
         $user = auth('api')->user();
         if ($user->user_type !== 'admin') {
             auth('api')->logout();
+       
             return $this->sendError('Unauthorized', ['error' => 'You are not authorized to access this area'], 403);
         }
 
@@ -137,7 +142,7 @@ class AuthController extends BaseController
             'access_token' => $token,
             'token_type' => 'bearer',
             'expires_in' => auth()->factory()->getTTL() * 60,
-            'user' => auth()->user()
+            'user' => auth()->user(),
         ], 'Admin logged in successfully');
     }
 
