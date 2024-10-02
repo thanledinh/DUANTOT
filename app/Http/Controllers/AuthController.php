@@ -253,4 +253,6 @@ class AuthController extends BaseController
 
         return $this->sendResponse([], 'Mật khẩu đã được thay đổi thành công.');
     }
+
+
 }

@@ -11,8 +11,12 @@ class Order extends Model
         'total_price',
         'status',
         'payment_method',
-        'sale'
-    ];
+        'sale',
+        'address',
+        'phone',
+        'note',
+        'order_date' // Thêm dòng này
+    ];    
     public function items()
     {
         return $this->hasMany(OrderItem::class, 'order_id');
