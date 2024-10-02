@@ -13,7 +13,7 @@ use App\Http\Controllers\apiWishlistController;
 use App\Http\Controllers\apiBrandController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\API\OrderItemController;
-
+use App\Http\Controllers\Admin\AdminOrdersController;
 Route::group([
     'middleware' => 'api',
     'prefix' => 'auth'
@@ -30,16 +30,14 @@ Route::group([
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->name('password.email');
 
     Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.reset');
-
-
 });
 
 
-Route::middleware(['auth:api', 'custom_throttle:5,1'])->group(function () {
-    Route::post('/favorites', [apiWishlistController::class, 'store']); // Thêm sản phẩm yêu thích
-    Route::get('/favorites', [apiWishlistController::class, 'index']);  // Lấy danh sách yêu thích của người dùng
-    Route::delete('/favorites/{id}', [apiWishlistController::class, 'destroy']);
-});
+
+Route::post('/favorites', [apiWishlistController::class, 'store']); // Thêm sản phẩm yêu thích
+Route::get('/favorites', [apiWishlistController::class, 'index']);  // Lấy danh sách yêu thích của người dùng
+Route::delete('/favorites/{id}', [apiWishlistController::class, 'destroy']);
+
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -70,7 +68,6 @@ Route::prefix('variants')->group(function () {
     Route::post('/', [apiProductVariantController::class, 'store']);
     Route::put('/{id}', [apiProductVariantController::class, 'update']);
     Route::delete('/{id}', [apiProductVariantController::class, 'delete']);
-
 });
 
 Route::get('/categories', [apiCategoryController::class, 'index']);
@@ -103,8 +100,12 @@ Route::delete('/brands/{id}', [apiBrandController::class, 'destroy']);
 Route::middleware(['auth:api', 'orders'])->group(function () {
     Route::get('orders', [OrderController::class, 'index']);
     Route::post('orders', [OrderController::class, 'store']);
-    Route::get('orders/{order_id}', [OrderController::class, 'show']);
+    Route::get('orders/{order_id}', [OrderController::class, 'showOrder']);
     Route::put('orders/{order_id}', [OrderController::class, 'update']);
     Route::delete('orders/{order_id}', [OrderController::class, 'destroy']);
     Route::get('order-items/{orderId}', [OrderItemController::class, 'showOrderItems']);
+    Route::get('pending-orders', [OrderController::class, 'showPendingOrder']);
 });
+
+Route::get('admin/orders', [AdminOrdersController::class, 'index']);
+Route::get('admin/orders/{pageSize}/{page}', [AdminOrdersController::class, 'show']);
