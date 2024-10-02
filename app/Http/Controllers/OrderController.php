@@ -38,6 +38,9 @@ class OrderController extends Controller
             'status' => 'required|string',
             'payment_method' => 'required|string',
             'sale' => 'nullable|numeric',
+            'address'=>'required|string',
+            'phone'=>'required|string',
+            'note'=>'nullabel|string',
             'items' => 'required|array',
 
             'items.*.product_id' => 'required|integer|exists:products,id',
@@ -55,6 +58,9 @@ class OrderController extends Controller
             $order->status = $request->status;
             $order->payment_method = $request->payment_method;
             $order->sale = $request->sale ?? 0;
+            $order->address = $request->address;
+            $order->phone = $request->phone;
+            $order->note = $request->note ?? '';
             $order->save();
 
             foreach ($request->items as $item) {
@@ -91,15 +97,24 @@ class OrderController extends Controller
         if ($order->status == 'processed' || $order->status == 'completed') {
             return response()->json(['message' => 'Không thể thay đổi trạng thái của đơn hàng đã được xử lý hoặc hoàn thành.'], 403);
         }
+    
         $request->validate([
-            'status' => 'required|string|in:pending,processed,completed,canceled',
+            'status' => 'nullable|string|in:pending,processed,completed,canceled', 
+            'address' => 'nullable|string', 
+            'phone' => 'nullable|string',   
+            'note' => 'nullable|string',   
         ]);
+    
         try {
-            $order->update([
-                'status' => $request->status,
-            ]);
+            $order->update(array_filter([
+                'status' => $request->status, 
+                'address' => $request->address,  
+                'phone' => $request->phone,     
+                'note' => $request->note,      
+            ]));
+    
             return response()->json([
-                'message' => 'Trạng thái đơn hàng đã được cập nhật thành công.',
+                'message' => 'Đơn hàng đã được cập nhật thành công.',
                 'order' => $order
             ], 200);
         } catch (\Exception $e) {
@@ -109,6 +124,8 @@ class OrderController extends Controller
             ], 500);
         }
     }
+    
+    
     public function destroy($id)
     {
         $user = Auth::user();
