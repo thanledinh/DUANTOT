@@ -16,7 +16,7 @@ class CreateOrdersTable extends Migration
             $table->decimal('total_price', 10, 2);
             $table->string('status');
             $table->string('payment_method');
-            $table->boolean('sale')->default(false);
+            $table->decimal('sale', 10, 2)->nullable();
             $table->string('address');
             $table->string('phone');
             $table->text('note')->nullable();
