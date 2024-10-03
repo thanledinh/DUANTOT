@@ -8,12 +8,18 @@ use App\Http\Controllers\apiCategoryController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\FlashSaleController;
-use App\Http\Controllers\FlashSaleProductController;
+
 use App\Http\Controllers\apiWishlistController;
 use App\Http\Controllers\apiBrandController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\API\OrderItemController;
 use App\Http\Controllers\Admin\AdminOrdersController;
+use App\Http\Controllers\Admin\AdminUserController;
+use App\Http\Controllers\Admin\AdminProductsController;
+
+
+
+
 Route::group([
     'middleware' => 'api',
     'prefix' => 'auth'
@@ -43,12 +49,24 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
+Route::prefix('admin')->group(function () {
 
+    Route::get('/products/{productId}/variants', [AdminProductsController::class, 'getProductVariants']);
+
+    Route::get('/products/lowest-stock', [AdminProductsController::class, 'getProductsWithLowestStock']);
+
+    Route::get('/products/stock-quantity/{minStock}/{maxStock}', [AdminProductsController::class, 'getProductsByStockQuantity']);
+
+    Route::put('/products/{productId}/variants/{variantId}/stock-quantity/{newStockQuantity}', [AdminProductsController::class, 'updateStockQuantity']);
+});
 
 // Nhóm các route liên quan đến products
 Route::prefix('products')->group(function () {
     Route::get('/sort', [apiProductController::class, 'sortByPrice']);
     Route::get('/', [apiProductController::class, 'index']);
+    Route::get('/latest', [apiProductController::class, 'getLatestProducts']);
+    Route::get('/hot', [apiProductController::class, 'getHotProducts']);
+    Route::get('/best-selling', [apiProductController::class, 'getBestSellingProducts']);
     Route::get('/products_paginate', [apiProductController::class, 'products_paginate']);
     Route::get('/{id}', [apiProductController::class, 'show']);
     Route::post('/', [apiProductController::class, 'store']);
@@ -106,6 +124,24 @@ Route::middleware(['auth:api', 'orders'])->group(function () {
     Route::get('order-items/{orderId}', [OrderItemController::class, 'showOrderItems']);
     Route::get('pending-orders', [OrderController::class, 'showPendingOrder']);
 });
+
+// Route::middleware(['auth:api', 'users'])->group(function () {
+
+//     Route::get('/users', [AdminUserController::class, 'index']);
+//     Route::get('/users/{id}', [AdminUserController::class, 'show']);
+//     Route::post('/users', [AdminUserController::class, 'store']);
+//     Route::put('/users/status/{id}', [AdminUserController::class, 'updateStatus']);
+// });
+
+Route::get('/users', [AdminUserController::class, 'index']);
+Route::get('/users/search', [AdminUserController::class, 'searchUserByName']);
+Route::get('/users/{id}', [AdminUserController::class, 'show']);
+Route::post('/users', [AdminUserController::class, 'store']);
+Route::put('/users/status/{id}', [AdminUserController::class, 'updateStatus']);
+Route::get('/users/{userId}/orders', [AdminUserController::class, 'getOrdersByUser']);
+
+
+
 
 Route::get('admin/orders', [AdminOrdersController::class, 'index']);
 Route::get('admin/orders/{pageSize}/{page}', [AdminOrdersController::class, 'show']);
