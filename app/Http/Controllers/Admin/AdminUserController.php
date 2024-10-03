@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
-
+use App\Models\Order;
 class AdminUserController extends Controller
 {
     //
@@ -73,5 +73,23 @@ class AdminUserController extends Controller
         $user->status = $request->status;
         $user->save();
         return response()->json($user);
+    }
+
+    // tìm người dùng theo tên 
+    public function searchUserByName(Request $request)
+    {
+        $request->validate([
+            'username' => 'required|string|max:255',
+        ]);
+
+        $user = User::where('username', 'like', '%' . $request->username . '%')->get();
+        return response()->json($user);
+    }
+
+    ///api/users/{userId}/orders
+    public function getOrdersByUser($userId)
+    {
+        $orders = Order::where('user_id', $userId)->get();
+        return response()->json($orders);
     }
 }
