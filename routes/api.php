@@ -49,6 +49,9 @@ Route::get('/user', function (Request $request) {
 Route::prefix('products')->group(function () {
     Route::get('/sort', [apiProductController::class, 'sortByPrice']);
     Route::get('/', [apiProductController::class, 'index']);
+    Route::get('/latest', [apiProductController::class, 'getLatestProducts']);
+    Route::get('/hot', [apiProductController::class, 'getHotProducts']);
+    Route::get('/best-selling', [apiProductController::class, 'getBestSellingProducts']);
     Route::get('/products_paginate', [apiProductController::class, 'products_paginate']);
     Route::get('/{id}', [apiProductController::class, 'show']);
     Route::post('/', [apiProductController::class, 'store']);

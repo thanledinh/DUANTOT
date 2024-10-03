@@ -226,4 +226,38 @@ class apiProductController extends Controller
     }
 
 
+    public function getLatestProducts(Request $request)
+    {
+        // Lấy 10 sản phẩm mới nhất, có thể thay đổi số lượng theo nhu cầu
+        $latestProducts = Product::orderBy('created_at', 'desc') // Sắp xếp theo thời gian tạo
+            ->take(10) 
+            ->get();
+
+        return response()->json($latestProducts);
+    }
+
+
+    public function getHotProducts(Request $request)
+    {
+       
+        $hotProducts = Product::withCount('wishlists') // Đếm số lượng wishlist cho mỗi sản phẩm
+            ->orderBy('wishlists_count', 'desc') // Sắp xếp theo số lượng wishlist
+            ->take(10) 
+            ->get();
+
+        return response()->json($hotProducts);
+    }
+
+    public function getBestSellingProducts(Request $request)
+    {
+       
+        $bestSellingProducts = Product::withCount('orderItems') // Đếm số lượng đơn hàng cho mỗi sản phẩm
+            ->orderBy('order_items_count', 'desc') // Sắp xếp theo số lượng đơn hàng
+            ->take(10) 
+            ->get();
+
+        return response()->json($bestSellingProducts);
+    }
+
+
 }
