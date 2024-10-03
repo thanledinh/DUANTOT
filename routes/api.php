@@ -14,6 +14,7 @@ use App\Http\Controllers\apiBrandController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\API\OrderItemController;
 use App\Http\Controllers\Admin\AdminOrdersController;
+use App\Http\Controllers\Admin\AdminUserController;
 Route::group([
     'middleware' => 'api',
     'prefix' => 'auth'
@@ -109,6 +110,21 @@ Route::middleware(['auth:api', 'orders'])->group(function () {
     Route::get('order-items/{orderId}', [OrderItemController::class, 'showOrderItems']);
     Route::get('pending-orders', [OrderController::class, 'showPendingOrder']);
 });
+
+// Route::middleware(['auth:api', 'users'])->group(function () {
+
+//     Route::get('/users', [AdminUserController::class, 'index']);
+//     Route::get('/users/{id}', [AdminUserController::class, 'show']);
+//     Route::post('/users', [AdminUserController::class, 'store']);
+//     Route::put('/users/status/{id}', [AdminUserController::class, 'updateStatus']);
+// });
+
+Route::get('/users', [AdminUserController::class, 'index']);
+Route::get('/users/{id}', [AdminUserController::class, 'show']);
+Route::post('/users', [AdminUserController::class, 'store']);
+Route::put('/users/status/{id}', [AdminUserController::class, 'updateStatus']);
+
+
 
 Route::get('admin/orders', [AdminOrdersController::class, 'index']);
 Route::get('admin/orders/{pageSize}/{page}', [AdminOrdersController::class, 'show']);
