@@ -155,7 +155,7 @@ class OrderController extends Controller
 
             return response()->json([
                 'message' => 'Đơn hàng đã được cập nhật thành công.',
-                'order' => $orderf
+                'order' => $order
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
