@@ -116,4 +116,17 @@ class apiCategoryController extends Controller
         file_put_contents(public_path($imagePath), base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $imageData)));
         return $imagePath;
     }
+    // Lấy danh sách tất cả các subcategories
+    public function getSubcategories()
+    {
+        $subcategories = Category::whereNotNull('parent_id')->get();
+        return response()->json($subcategories);
+    }
+    // Lấy danh sách tất cả các categories không có parent_id
+    public function getParentCategories()
+    {
+        $parentCategories = Category::whereNull('parent_id')->get();
+        return response()->json($parentCategories);
+    }
+    
 }
