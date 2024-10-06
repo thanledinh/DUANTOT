@@ -1,9 +1,11 @@
 <?php
 
 namespace App\Http\Controllers;
+use Illuminate\Support\Str; 
 
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Shipping;
 use Illuminate\Http\Request;
 
 
@@ -39,78 +41,69 @@ class OrderController extends Controller
     }
 
     public function store(Request $request)
-    {
-        // Lấy thông tin người dùng từ token
-        $user = $request->user();
+{
+    // Validate dữ liệu từ phía request
+    $request->validate([
+        'id_promotion' => 'nullable|integer',
+        'total_price' => 'required|numeric',
+        'payment_method' => 'nullable|string',
+        'sale' => 'nullable|numeric',
+        'note' => 'nullable|string',
+        'items' => 'required|array',
+        'items.*.product_id' => 'required|integer|exists:products,id',
+        'items.*.quantity' => 'required|integer|min:1',
+        'items.*.price' => 'required|numeric|min:0',
+        'items.*.variant_id' => 'required|integer|min:1',
+    ]);
 
-        if (!$user) {
-            return response()->json(['message' => 'Lỗi: Người dùng không tồn tại.'], 401);
+    try {
+        // Tạo đối tượng đơn hàng mới
+        $order = new Order();
+
+        // Kiểm tra nếu người dùng đã đăng nhập, lưu `user_id`
+        if (auth()->guard('api')->check()) {
+            $order->user_id = auth()->guard('api')->id();
+        } else {
+            $order->user_id = null; // Đảm bảo user_id không được gán nếu người dùng chưa đăng nhập
         }
 
-        // Kiểm tra xem người dùng có đơn hàng pending nào không
-        $existingPendingOrder = Order::where('user_id', $user->id)
-            ->where('status', 'pending')
-            ->first();
+        // Tạo mã theo dõi đơn hàng (10 ký tự ngẫu nhiên)
+        $order->tracking_code = strtoupper(Str::random(10)); // VD: 10 ký tự chữ hoa ngẫu nhiên
 
-        if ($existingPendingOrder) {
-            return response()->json(['message' => 'Bạn có một đơn hàng chưa xác nhận.'], 400);
+        $order->id_promotion = $request->id_promotion ?? null;
+        $order->order_date = now(); // Tự động thêm ngày hiện tại
+        $order->total_price = $request->total_price;
+        $order->status = 'pending'; // Trạng thái mặc định là pending khi tạo đơn hàng
+        $order->payment_method = $request->payment_method ?? null;
+        $order->sale = $request->sale ?? 0;
+        $order->note = $request->note ?? null;
+        $order->save();
+
+        // Lưu các mục trong đơn hàng
+        foreach ($request->items as $item) {
+            OrderItem::create([
+                'order_id' => $order->id,
+                'product_id' => $item['product_id'],
+                'quantity' => $item['quantity'],
+                'variant_id' => $item['variant_id'],
+                'price' => $item['price'],
+            ]);
         }
 
-        // Validate dữ liệu từ phía request
-        $request->validate([
-            'id_promotion' => 'nullable|integer',
-            'total_price' => 'required|numeric',
-            'payment_method' => 'nullable|string',
-            'sale' => 'nullable|numeric',
-            'address' => 'nullable|string', // Địa chỉ có thể null khi tạo đơn hàng với trạng thái pending
-            'phone' => 'nullable|string',   // Số điện thoại có thể null khi tạo đơn hàng với trạng thái pending
-            'note' => 'nullable|string',    // Note không bắt buộc
-            'items' => 'required|array',
-            'items.*.product_id' => 'required|integer|exists:products,id',
-            'items.*.quantity' => 'required|integer|min:1',
-            'items.*.price' => 'required|numeric|min:0',
-            'items.*.variant_id' => 'required|integer|min:1',
-        ]);
-
-        try {
-            // Tạo đối tượng đơn hàng mới
-            $order = new Order();
-            $order->user_id = $user->id;
-            $order->id_promotion = $request->id_promotion ?? null;
-            $order->order_date = now(); // Tự động thêm ngày hiện tại
-            $order->total_price = $request->total_price;
-            $order->status = 'pending'; // Trạng thái mặc định là pending khi tạo đơn hàng
-            $order->payment_method = $request->payment_method ?? null;
-            $order->sale = $request->sale ?? 0;
-            $order->address = $request->address ?? null; // Địa chỉ có thể null
-            $order->phone = $request->phone ?? null;     // Số điện thoại có thể null
-            $order->note = $request->note ?? null;       // Ghi chú có thể null
-            $order->save();
-
-            // Lưu các mục trong đơn hàng
-            foreach ($request->items as $item) {
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_id' => $item['product_id'],
-                    'quantity' => $item['quantity'],
-                    'variant_id' => $item['variant_id'],
-                    'price' => $item['price'],
-                ]);
-            }
-
-            // Trả về phản hồi thành công
-            return response()->json([
-                'message' => 'Đơn hàng đã được tạo thành công.',
-                'order' => $order
-            ], 201);
-        } catch (\Exception $e) {
-            // Bắt lỗi và trả về thông báo
-            return response()->json([
-                'message' => 'Đã xảy ra lỗi khi tạo đơn hàng.',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        // Trả về phản hồi thành công
+        return response()->json([
+            'message' => 'Đơn hàng đã được tạo thành công.',
+            'order' => $order,
+            'tracking_code' => $order->tracking_code // Trả mã theo dõi về phản hồi cho người dùng
+        ], 201);
+    } catch (\Exception $e) {
+        // Bắt lỗi và trả về thông báo
+        return response()->json([
+            'message' => 'Đã xảy ra lỗi khi tạo đơn hàng.',
+            'error' => $e->getMessage()
+        ], 500);
     }
+}
 
     public function update(Request $request, $id)
     {
@@ -133,16 +126,12 @@ class OrderController extends Controller
 
         $request->validate([
             'status' => 'nullable|string|in:pending,processed,completed,canceled',
-            'address' => 'nullable|string',
-            'phone' => 'nullable|string',
             'note' => 'nullable|string',
         ]);
 
         try {
             $order->update(array_filter([
                 'status' => $request->status,
-                'address' => $request->address,
-                'phone' => $request->phone,
                 'note' => $request->note,
                 'payment_method' => $request->payment_method === 'cash_on_delivery' ? 'cash_on_delivery' : $order->payment_method, // Cập nhật payment_method
             ]));
