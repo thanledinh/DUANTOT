@@ -16,9 +16,7 @@ use App\Http\Controllers\API\OrderItemController;
 use App\Http\Controllers\Admin\AdminOrdersController;
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AdminProductsController;
-
-
-
+use App\Http\Controllers\ShippingController;
 
 Route::group([
     'middleware' => 'api',
@@ -117,19 +115,16 @@ Route::post('/brands', [apiBrandController::class, 'store']);
 Route::put('/brands/{id}', [apiBrandController::class, 'update']);
 Route::delete('/brands/{id}', [apiBrandController::class, 'destroy']);
 
+//user
+Route::get('orders', [OrderController::class, 'index']);
+Route::get('orders/{order_id}', [OrderController::class, 'showOrder']);
 Route::post('orders', [OrderController::class, 'store']);
+Route::get('order-items/{orderId}', [OrderItemController::class, 'showOrderItems']);
 
-
-Route::middleware(['auth:api', 'orders'])->group(function () {
-    Route::get('orders', [OrderController::class, 'index']);
-    Route::get('orders/{order_id}', [OrderController::class, 'showOrder']);
-    Route::put('orders/{order_id}', [OrderController::class, 'update']);
-    Route::delete('orders/{order_id}', [OrderController::class, 'destroy']);
-    Route::get('order-items/{orderId}', [OrderItemController::class, 'showOrderItems']);
-    Route::get('pending-orders', [OrderController::class, 'showPendingOrder']);
-});
-
-// Route::middleware(['auth:api', 'users'])->group(function () {
+// amdin
+Route::put('orders/{order_id}', [OrderController::class, 'update']);
+Route::delete('orders/{order_id}', [OrderController::class, 'destroy']);
+Route::get('pending-orders', [OrderController::class, 'showPendingOrder']);
 
 //     Route::get('/users', [AdminUserController::class, 'index']);
 //     Route::get('/users/{id}', [AdminUserController::class, 'show']);
@@ -149,3 +144,5 @@ Route::get('/users/{userId}/orders', [AdminUserController::class, 'getOrdersByUs
 
 Route::get('admin/orders', [AdminOrdersController::class, 'index']);
 Route::get('admin/orders/{pageSize}/{page}', [AdminOrdersController::class, 'show']);
+
+Route::post('orders/{order_id}/shipping', [ShippingController::class, 'store']);
