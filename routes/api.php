@@ -113,11 +113,11 @@ Route::post('/brands', [apiBrandController::class, 'store']);
 Route::put('/brands/{id}', [apiBrandController::class, 'update']);
 Route::delete('/brands/{id}', [apiBrandController::class, 'destroy']);
 
+Route::post('orders', [OrderController::class, 'store']);
 
 
 Route::middleware(['auth:api', 'orders'])->group(function () {
     Route::get('orders', [OrderController::class, 'index']);
-    Route::post('orders', [OrderController::class, 'store']);
     Route::get('orders/{order_id}', [OrderController::class, 'showOrder']);
     Route::put('orders/{order_id}', [OrderController::class, 'update']);
     Route::delete('orders/{order_id}', [OrderController::class, 'destroy']);

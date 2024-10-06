@@ -12,10 +12,8 @@ class Order extends Model
         'status',
         'payment_method',
         'sale',
-        'address',
-        'phone',
         'note',
-        'order_date' // Thêm dòng này
+        'order_date' 
     ];    
     public function items()
     {
@@ -24,5 +22,9 @@ class Order extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+    public function shipping()
+    {
+        return $this->belongsTo(Shipping::class);
     }
 }
