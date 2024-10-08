@@ -145,4 +145,6 @@ Route::get('/users/{userId}/orders', [AdminUserController::class, 'getOrdersByUs
 Route::get('admin/orders', [AdminOrdersController::class, 'index']);
 Route::get('admin/orders/{pageSize}/{page}', [AdminOrdersController::class, 'show']);
 
+
+Route::get('/shipping/{order_id}', [ShippingController::class, 'show']);
 Route::post('orders/{order_id}/shipping', [ShippingController::class, 'store']);

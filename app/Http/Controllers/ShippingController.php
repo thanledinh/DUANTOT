@@ -51,5 +51,27 @@ class ShippingController extends Controller
             ], 500);
         }
     }
+    public function show($order_id)
+{
+    try {
+        $order = Order::find($order_id);
+        if (!$order) {
+            return response()->json(['message' => 'không tìm thấy đơn hàng'], 404);
+        }
+        $shipping = Shipping::where('order_id', $order_id)->first();
+        if (!$shipping) {
+            return response()->json(['message' => 'không tin vận chuyển không tồn tại'], 404);
+        }
+        return response()->json([
+            'message' => 'thông tin vận chuyển',
+            'shipping' => $shipping
+        ], 200);
+    } catch (\Exception $e) {
+        return response()->json([
+            'message' => 'Đã có lỗi xảy ra: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
     
 }
