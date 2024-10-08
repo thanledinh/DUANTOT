@@ -72,6 +72,8 @@ Route::prefix('products')->group(function () {
     Route::delete('/{id}', [apiProductController::class, 'delete']);
     Route::get('/search/{query}', [apiProductController::class, 'search']);
     Route::get('/{id}/related', [apiProductController::class, 'relatedProducts']);
+    Route::get('/category/{categoryId}', [apiProductController::class, 'getProductsByCategory']);
+    Route::get('/category/url/{categoryUrl}', [apiProductController::class, 'getProductsByCategoryUrl']);
 });
 
 
@@ -91,6 +93,8 @@ Route::get('/categories/{id}', [apiCategoryController::class, 'show']);
 Route::post('/categories', [apiCategoryController::class, 'store']);
 Route::put('/categories/{id}', [apiCategoryController::class, 'update']);
 Route::delete('/categories/{id}', [apiCategoryController::class, 'destroy']);
+Route::get('/categorie/subcategories', [apiCategoryController::class, 'getSubcategories']);
+Route::get('/categorie/parent-categories', [apiCategoryController::class, 'getParentCategories']);
 
 Route::post('/promotion/create', [PromotionController::class, 'create']);
 Route::post('/promotion/check', [PromotionController::class, 'check']);

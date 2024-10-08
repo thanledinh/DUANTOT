@@ -27,6 +27,7 @@ class apiCategoryController extends Controller
             'description' => 'nullable|string',
             'image' => 'nullable|string',
             'parent_id' => 'nullable|integer|exists:categories,id', // Thêm validation cho parent_id
+            'url' => 'nullable|string|max:255', // Thêm validation cho url
         ]);
 
         $imagePath = null;
@@ -40,6 +41,7 @@ class apiCategoryController extends Controller
             'description' => $request->description,
             'image' => $imagePath,
             'parent_id' => $request->parent_id, // Lưu parent_id
+            'url' => $request->url, // Lưu url
         ]);
 
         $category->save();
@@ -80,6 +82,7 @@ class apiCategoryController extends Controller
             'description' => 'nullable|string',
             'image' => 'nullable|string',
             'parent_id' => 'nullable|integer|exists:categories,id', // Thêm validation cho parent_id
+            'url' => 'nullable|string|max:255', // Thêm validation cho url
         ]);
 
         // Xử lý upload hình ảnh nếu có
@@ -92,6 +95,7 @@ class apiCategoryController extends Controller
         $category->name = $request->name;
         $category->description = $request->description;
         $category->parent_id = $request->parent_id; // Cập nhật parent_id
+        $category->url = $request->url; // Cập nhật url
         $category->save();
 
         return response()->json(['message' => 'Category updated successfully', 'category' => $category]);
@@ -116,4 +120,17 @@ class apiCategoryController extends Controller
         file_put_contents(public_path($imagePath), base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $imageData)));
         return $imagePath;
     }
+    // Lấy danh sách tất cả các subcategories
+    public function getSubcategories()
+    {
+        $subcategories = Category::whereNotNull('parent_id')->get();
+        return response()->json($subcategories);
+    }
+    // Lấy danh sách tất cả các categories không có parent_id
+    public function getParentCategories()
+    {
+        $parentCategories = Category::whereNull('parent_id')->get();
+        return response()->json($parentCategories);
+    }
+    
 }

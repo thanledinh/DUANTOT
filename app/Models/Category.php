@@ -14,6 +14,7 @@ class Category extends Model
         'description',
         'image',
         'parent_id',
+        'url',
     ];
 
     // Mối quan hệ với subcategories

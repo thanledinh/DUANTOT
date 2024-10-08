@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\Category;
+
+
 
 class apiProductController extends Controller
 {
@@ -258,6 +261,40 @@ class apiProductController extends Controller
 
         return response()->json($bestSellingProducts);
     }
+
+    // hiển thị sản phẩm theo danh mục
+    public function getProductsByCategory($categoryId)
+    {
+        // Lấy tất cả subcategories của category với id = $categoryId
+        $subcategories = Category::where('parent_id', $categoryId)->pluck('id');
+
+        // Lấy tất cả sản phẩm thuộc về các subcategories
+        $products = Product::with('variants')
+            ->whereIn('category_id', $subcategories)
+            ->get();
+
+        return response()->json($products, 200);
+    }
+
+        // hiển thị sản phẩm theo danh mục
+        public function getProductsByCategoryUrl($categoryUrl, Request $request) // Added Request $request parameter
+        {
+            // Tìm category dựa trên URL
+            $category = Category::where('url', $categoryUrl)->firstOrFail();
+        
+            // Lấy tất cả subcategories của category với id = $category->id
+            $subcategories = Category::where('parent_id', $category->id)->pluck('id');
+        
+            // Lấy tất cả sản phẩm thuộc về các subcategories với phân trang
+            $pageSize = $request->input('pageSize', 10); // Mặc định là 10 nếu không có tham số
+            $pageNumber = $request->input('pageNumber', 1); // Mặc định là 1 nếu không có tham số
+    
+            $products = Product::with('variants')
+                ->whereIn('category_id', $subcategories)
+                ->paginate($pageSize, ['*'], 'page', $pageNumber); // Added pagination
+    
+            return response()->json($products, 200);
+        }
 
 
 }
