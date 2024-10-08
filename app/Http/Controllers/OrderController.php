@@ -3,12 +3,9 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Support\Str;
-
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Models\Shipping;
 use Illuminate\Http\Request;
-
 
 class OrderController extends Controller
 {
@@ -37,7 +34,7 @@ class OrderController extends Controller
     {
         $request->validate([
             'id_promotion' => 'nullable|integer',
-            'payment_method' => 'nullable|string',
+            'payment_method' => 'required|string|in:credit_card,cash_on_delivery,bank_transfer', 
             'sale' => 'nullable|numeric',
             'note' => 'nullable|string',
             'items' => 'required|array',
@@ -62,7 +59,7 @@ class OrderController extends Controller
             $order->order_date = now();
             $order->total_price = $total_price;
             $order->status = 'pending';
-            $order->payment_method = $request->payment_method ?? null;
+            $order->payment_method = $request->payment_method; 
             $order->sale = $request->sale ?? 0;
             $order->note = $request->note ?? null;
             $order->save();
@@ -103,13 +100,14 @@ class OrderController extends Controller
         }
         $request->validate([
             'status' => 'nullable|string|in:pending,processed,completed,canceled',
+            'payment_method' => 'nullable|string|in:credit_card,cash_on_delivery,bank_transfer',
             'note' => 'nullable|string',
         ]);
         try {
             $order->update(array_filter([
                 'status' => $request->status,
                 'note' => $request->note,
-                'payment_method' => $request->payment_method === 'cash_on_delivery' ? 'cash_on_delivery' : $order->payment_method, // Cập nhật payment_method
+                'payment_method' => $request->payment_method === 'cash_on_delivery' ? 'cash_on_delivery' : $order->payment_method, 
             ]));
             if ($request->payment_method === 'cash_on_delivery') {
                 $order->status = 'confirmed';
@@ -154,7 +152,6 @@ class OrderController extends Controller
         $orders = Order::where('status', 'pending')
             ->with(['items.product', 'items.variant'])
             ->get();
-
         return response()->json([
             'message' => 'Đơn hàng đã được lấy thành công.',
             'orders' => $orders
