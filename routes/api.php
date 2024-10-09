@@ -98,7 +98,6 @@ Route::get('/categorie/parent-categories', [apiCategoryController::class, 'getPa
 
 Route::post('/promotion/create', [PromotionController::class, 'create']);
 Route::post('/promotion/check', [PromotionController::class, 'check']);
-Route::post('/promotion/apply', [PromotionController::class, 'apply']);
 
 
 
