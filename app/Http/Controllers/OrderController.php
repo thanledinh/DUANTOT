@@ -49,6 +49,7 @@ class OrderController extends Controller
             foreach ($request->items as $item) {
                 $total_price += $item['price'] * $item['quantity'];
             }
+
             $order = new Order();
             if (auth()->guard('api')->check()) {
                 $order->user_id = auth()->guard('api')->id();
@@ -63,6 +64,7 @@ class OrderController extends Controller
             $order->payment_method = $request->payment_method;
             $order->sale = $request->sale ?? 0;
             $order->note = $request->note ?? null;
+            $shipping_cost = 40000;
             if ($request->id_promotion) {
                 $promotion = Promotion::find($request->id_promotion);
                 if ($promotion) {
@@ -74,13 +76,12 @@ class OrderController extends Controller
                             $order->total_price -= $promotion->discount_amount;
                         }
                         if ($promotion->free_shipping) {
-                            $order->shipping_fee = 0;
+                            $shipping_cost = 0;
                         }
                         $order->total_price = max(0, $order->total_price);
                     }
                 }
             }
-
             $order->save();
             foreach ($request->items as $item) {
                 OrderItem::create([
@@ -91,11 +92,10 @@ class OrderController extends Controller
                     'price' => $item['price'],
                 ]);
             }
-
             return response()->json([
                 'message' => 'Đơn hàng đã được tạo thành công.',
                 'order' => $order,
-                'tracking_code' => $order->tracking_code
+                'shipping_cost' => $shipping_cost
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
