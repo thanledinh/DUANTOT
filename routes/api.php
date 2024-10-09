@@ -16,7 +16,9 @@ use App\Http\Controllers\API\OrderItemController;
 use App\Http\Controllers\Admin\AdminOrdersController;
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AdminProductsController;
+use App\Http\Controllers\FlashSaleProductController;
 use App\Http\Controllers\ShippingController;
+use App\Models\FlashSaleProduct;
 
 Route::group([
     'middleware' => 'api',
@@ -98,16 +100,10 @@ Route::get('/categorie/parent-categories', [apiCategoryController::class, 'getPa
 
 Route::post('/promotion/create', [PromotionController::class, 'create']);
 Route::post('/promotion/check', [PromotionController::class, 'check']);
-Route::post('/promotion/apply', [PromotionController::class, 'apply']);
 
 
 
-Route::get('flash-sales', [FlashSaleController::class, 'index'])->name('flash-sales.index');
-Route::get('flash-sales/{id}', [FlashSaleController::class, 'show'])->name('flash-sales.show');
-Route::post('flash-sales', [FlashSaleController::class, 'store'])->name('flash-sales.store');
-Route::put('flash-sales/{id}', [FlashSaleController::class, 'update'])->name('flash-sales.update');
-Route::patch('flash-sales/{id}', [FlashSaleController::class, 'update'])->name('flash-sales.update');
-Route::delete('flash-sales/{id}', [FlashSaleController::class, 'destroy'])->name('flash-sales.destroy');
+
 
 Route::get('/brands', [apiBrandController::class, 'index']);
 Route::get('/brands/{id}', [apiBrandController::class, 'show']);
@@ -138,8 +134,12 @@ Route::get('/users/{id}', [AdminUserController::class, 'show']);
 Route::post('/users', [AdminUserController::class, 'store']);
 Route::put('/users/status/{id}', [AdminUserController::class, 'updateStatus']);
 Route::get('/users/{userId}/orders', [AdminUserController::class, 'getOrdersByUser']);
+//flas sale
+Route::get('flash-sales', [FlashSaleController::class, 'index']);  
+Route::get('flash-sales/{id}', [FlashSaleController::class, 'show']);  
+Route::post('flash-sales/create', [FlashSaleController::class, 'store']);  
 
-
+Route::post('flash-sales/add-product', [FlashSaleProductController::class, 'addProductToFlashSale']);
 
 
 Route::get('admin/orders', [AdminOrdersController::class, 'index']);
@@ -148,3 +148,5 @@ Route::get('admin/orders/{pageSize}/{page}', [AdminOrdersController::class, 'sho
 
 Route::get('/shipping/{order_id}', [ShippingController::class, 'show']);
 Route::post('orders/{order_id}/shipping', [ShippingController::class, 'store']);
+    
+Route::get('product/{id}/price', [apiProductController::class, 'getProductPrice']);

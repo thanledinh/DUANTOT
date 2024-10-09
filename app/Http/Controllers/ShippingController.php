@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\Promotion;
 use App\Models\Shipping;
 use Illuminate\Http\Request;
 
@@ -19,7 +20,6 @@ class ShippingController extends Controller
                 'district' => 'required|string|max:255',
                 'phone' => 'required|string|max:15',
                 'shipping_method' => 'required|string',
-                'shipping_cost' => 'required|numeric|min:0',
             ]);
             $order = Order::find($order_id);
             if (!$order) {
@@ -29,8 +29,19 @@ class ShippingController extends Controller
             if ($shippingExists) {
                 return response()->json(['message' => 'Thông tin vận chuyển đã tồn tại cho đơn hàng này.'], 400);
             }
+            $shipping_cost = 40000;
+            if ($order->id_promotion) {
+                $promotion = Promotion::find($order->id_promotion);
+                if ($promotion && $promotion->free_shipping) {
+                    $shipping_cost = 0;
+                }
+            }
+            if ($shipping_cost > 0) {
+                $order->total_price += $shipping_cost;
+            }
+            $order->save();
             $shipping = new Shipping();
-            $shipping->order_id = $order_id;
+            $shipping->order_id = $order->id;
             $shipping->full_name = $request->full_name;
             $shipping->email = $request->email;
             $shipping->shipping_address = $request->shipping_address;
@@ -38,9 +49,10 @@ class ShippingController extends Controller
             $shipping->district = $request->district;
             $shipping->phone = $request->phone;
             $shipping->shipping_method = $request->shipping_method;
-            $shipping->shipping_cost = $request->shipping_cost;
+            $shipping->shipping_cost = $shipping_cost;
             $shipping->shipping_status = 'pending';
             $shipping->save();
+
             return response()->json([
                 'message' => 'Thông tin vận chuyển đã được thêm thành công.',
                 'shipping' => $shipping
@@ -52,26 +64,24 @@ class ShippingController extends Controller
         }
     }
     public function show($order_id)
-{
-    try {
-        $order = Order::find($order_id);
-        if (!$order) {
-            return response()->json(['message' => 'không tìm thấy đơn hàng'], 404);
+    {
+        try {
+            $order = Order::find($order_id);
+            if (!$order) {
+                return response()->json(['message' => 'không tìm thấy đơn hàng'], 404);
+            }
+            $shipping = Shipping::where('order_id', $order_id)->first();
+            if (!$shipping) {
+                return response()->json(['message' => 'không tin vận chuyển không tồn tại'], 404);
+            }
+            return response()->json([
+                'message' => 'thông tin vận chuyển',
+                'shipping' => $shipping
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Đã có lỗi xảy ra: ' . $e->getMessage()
+            ], 500);
         }
-        $shipping = Shipping::where('order_id', $order_id)->first();
-        if (!$shipping) {
-            return response()->json(['message' => 'không tin vận chuyển không tồn tại'], 404);
-        }
-        return response()->json([
-            'message' => 'thông tin vận chuyển',
-            'shipping' => $shipping
-        ], 200);
-    } catch (\Exception $e) {
-        return response()->json([
-            'message' => 'Đã có lỗi xảy ra: ' . $e->getMessage()
-        ], 500);
     }
-}
-
-    
 }

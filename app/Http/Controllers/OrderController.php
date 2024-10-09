@@ -3,12 +3,10 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Support\Str;
-
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Models\Shipping;
+use App\Models\Promotion;
 use Illuminate\Http\Request;
-
 
 class OrderController extends Controller
 {
@@ -36,8 +34,8 @@ class OrderController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'id_promotion' => 'nullable|integer',
-            'payment_method' => 'nullable|string',
+            'id_promotion' => 'nullable|integer|exists:promotions,id',
+            'payment_method' => 'required|string|in:credit_card,cash_on_delivery,bank_transfer',
             'sale' => 'nullable|numeric',
             'note' => 'nullable|string',
             'items' => 'required|array',
@@ -51,6 +49,7 @@ class OrderController extends Controller
             foreach ($request->items as $item) {
                 $total_price += $item['price'] * $item['quantity'];
             }
+
             $order = new Order();
             if (auth()->guard('api')->check()) {
                 $order->user_id = auth()->guard('api')->id();
@@ -62,9 +61,27 @@ class OrderController extends Controller
             $order->order_date = now();
             $order->total_price = $total_price;
             $order->status = 'pending';
-            $order->payment_method = $request->payment_method ?? null;
+            $order->payment_method = $request->payment_method;
             $order->sale = $request->sale ?? 0;
             $order->note = $request->note ?? null;
+            $shipping_cost = 40000;
+            if ($request->id_promotion) {
+                $promotion = Promotion::find($request->id_promotion);
+                if ($promotion) {
+                    if ($total_price >= $promotion->minimum_order_value) {
+                        if ($promotion->discount_percentage) {
+                            $discount = ($total_price * $promotion->discount_percentage) / 100;
+                            $order->total_price -= $discount;
+                        } elseif ($promotion->discount_amount) {
+                            $order->total_price -= $promotion->discount_amount;
+                        }
+                        if ($promotion->free_shipping) {
+                            $shipping_cost = 0;
+                        }
+                        $order->total_price = max(0, $order->total_price);
+                    }
+                }
+            }
             $order->save();
             foreach ($request->items as $item) {
                 OrderItem::create([
@@ -78,7 +95,7 @@ class OrderController extends Controller
             return response()->json([
                 'message' => 'Đơn hàng đã được tạo thành công.',
                 'order' => $order,
-                'tracking_code' => $order->tracking_code
+                'shipping_cost' => $shipping_cost
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
@@ -90,7 +107,6 @@ class OrderController extends Controller
     public function update(Request $request, $id)
     {
         $user = $request->user();
-
         if (!$user) {
             return response()->json(['message' => 'Lỗi: Người dùng không tồn tại.'], 401);
         }
@@ -103,13 +119,14 @@ class OrderController extends Controller
         }
         $request->validate([
             'status' => 'nullable|string|in:pending,processed,completed,canceled',
+            'payment_method' => 'nullable|string|in:credit_card,cash_on_delivery,bank_transfer',
             'note' => 'nullable|string',
         ]);
         try {
             $order->update(array_filter([
                 'status' => $request->status,
                 'note' => $request->note,
-                'payment_method' => $request->payment_method === 'cash_on_delivery' ? 'cash_on_delivery' : $order->payment_method, // Cập nhật payment_method
+                'payment_method' => $request->payment_method === 'cash_on_delivery' ? 'cash_on_delivery' : $order->payment_method,
             ]));
             if ($request->payment_method === 'cash_on_delivery') {
                 $order->status = 'confirmed';
@@ -154,7 +171,6 @@ class OrderController extends Controller
         $orders = Order::where('status', 'pending')
             ->with(['items.product', 'items.variant'])
             ->get();
-
         return response()->json([
             'message' => 'Đơn hàng đã được lấy thành công.',
             'orders' => $orders
