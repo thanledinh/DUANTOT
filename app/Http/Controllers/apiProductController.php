@@ -43,37 +43,37 @@ class apiProductController extends Controller
             'variants.*.image' => 'nullable|string',
             'variants.*.sale' => 'nullable|numeric',
         ]);
-    
+
         // Xử lý hình ảnh sản phẩm nếu có
         if (isset($validatedData['image'])) {
             $validatedData['image'] = $this->handleImageUpload($validatedData['image'], 'product');
         }
-    
+
         // Tạo sản phẩm mới
         $product = Product::create($validatedData);
-    
+
         // Xử lý biến thể nếu có
         if (!empty($validatedData['variants'])) {
             foreach ($validatedData['variants'] as $variantData) {
                 // Kiểm tra và xử lý ảnh biến thể nếu có
                 if (isset($variantData['image'])) {
-                    $variantData['image'] = $this->handleImageUpload($variantData['image'], 'variant'); 
+                    $variantData['image'] = $this->handleImageUpload($variantData['image'], 'variant');
                 }
                 // Tạo biến thể cho sản phẩm
                 $product->variants()->create($variantData);
             }
         }
-    
+
         return response()->json($product->load('variants'), 201);
     }
-    
+
 
 
     public function update(Request $request, $id)
     {
         // Tìm sản phẩm
         $product = Product::findOrFail($id);
-    
+
         // Validate dữ liệu
         $validatedData = $request->validate([
             'name' => 'sometimes|required|string|max:255',
@@ -85,20 +85,20 @@ class apiProductController extends Controller
             'barcode' => 'nullable|string|max:255',
             'variants' => 'nullable|array',
         ]);
-    
+
         // Xử lý hình ảnh sản phẩm nếu có
         if (isset($validatedData['image'])) {
             $validatedData['image'] = $this->handleImageUpload($validatedData['image'], 'product');
         }
-    
+
         // Cập nhật sản phẩm
         $product->update($validatedData);
-    
+
         // Xử lý biến thể nếu có
         if (!empty($validatedData['variants'])) {
             foreach ($validatedData['variants'] as $variantData) {
                 $variant = $product->variants()->find($variantData['id'] ?? null);
-    
+
                 // Nếu biến thể đã tồn tại, kiểm tra và xử lý hình ảnh
                 if ($variant) {
                     // Nếu không có ảnh mới, giữ lại ảnh cũ
@@ -118,10 +118,10 @@ class apiProductController extends Controller
                 }
             }
         }
-    
+
         return response()->json($product->load('variants'), 200);
     }
-    
+
     public function search($query)
     {
         $products = Product::with('variants')
@@ -144,37 +144,37 @@ class apiProductController extends Controller
         // Tách phần type và dữ liệu base64
         list($type, $imageData) = explode(';', $imageData);
         list(, $imageData) = explode(',', $imageData);
-        
+
         // Giải mã dữ liệu base64
         $imageData = base64_decode($imageData);
-    
+
         // Tạo tên file hình ảnh với timestamp để đảm bảo tên file không trùng
         $imageName = time() . uniqid() . '.jpg'; // Bạn có thể thay đổi định dạng nếu cần
         $imageDirectory = public_path('images/' . $folder);
         $imagePath = $imageDirectory . '/' . $imageName;
-    
+
         // Kiểm tra xem thư mục đã tồn tại chưa, nếu chưa thì tạo mới
         if (!file_exists($imageDirectory)) {
             mkdir($imageDirectory, 0755, true);
         }
-    
+
         // Lưu hình ảnh vào thư mục
         file_put_contents($imagePath, $imageData);
-    
+
         // Trả về đường dẫn hình ảnh để lưu vào cơ sở dữ liệu
         return 'images/' . $folder . '/' . $imageName;
     }
-    
-    
+
+
 
     public function products_paginate(Request $request)
     {
         $pageSize = $request->input('pageSize', 10); // Mặc định là 10 nếu không có tham số
         $pageNumber = $request->input('pageNumber', 1); // Mặc định là 1 nếu không có tham số
-    
+
         // Phân trang sản phẩm
         $products = Product::with('variants')->paginate($pageSize, ['*'], 'page', $pageNumber);
-    
+
         return response()->json($products);
     }
 
@@ -233,7 +233,7 @@ class apiProductController extends Controller
     {
         // Lấy 10 sản phẩm mới nhất, có thể thay đổi số lượng theo nhu cầu
         $latestProducts = Product::orderBy('created_at', 'desc') // Sắp xếp theo thời gian tạo
-            ->take(10) 
+            ->take(10)
             ->get();
 
         return response()->json($latestProducts);
@@ -242,10 +242,10 @@ class apiProductController extends Controller
 
     public function getHotProducts(Request $request)
     {
-       
+
         $hotProducts = Product::withCount('wishlists') // Đếm số lượng wishlist cho mỗi sản phẩm
             ->orderBy('wishlists_count', 'desc') // Sắp xếp theo số lượng wishlist
-            ->take(10) 
+            ->take(10)
             ->get();
 
         return response()->json($hotProducts);
@@ -253,10 +253,10 @@ class apiProductController extends Controller
 
     public function getBestSellingProducts(Request $request)
     {
-       
+
         $bestSellingProducts = Product::withCount('orderItems') // Đếm số lượng đơn hàng cho mỗi sản phẩm
             ->orderBy('order_items_count', 'desc') // Sắp xếp theo số lượng đơn hàng
-            ->take(10) 
+            ->take(10)
             ->get();
 
         return response()->json($bestSellingProducts);
@@ -276,25 +276,35 @@ class apiProductController extends Controller
         return response()->json($products, 200);
     }
 
-        // hiển thị sản phẩm theo danh mục
-        public function getProductsByCategoryUrl($categoryUrl, Request $request) // Added Request $request parameter
-        {
-            // Tìm category dựa trên URL
-            $category = Category::where('url', $categoryUrl)->firstOrFail();
-        
-            // Lấy tất cả subcategories của category với id = $category->id
-            $subcategories = Category::where('parent_id', $category->id)->pluck('id');
-        
-            // Lấy tất cả sản phẩm thuộc về các subcategories với phân trang
-            $pageSize = $request->input('pageSize', 10); // Mặc định là 10 nếu không có tham số
-            $pageNumber = $request->input('pageNumber', 1); // Mặc định là 1 nếu không có tham số
-    
-            $products = Product::with('variants')
-                ->whereIn('category_id', $subcategories)
-                ->paginate($pageSize, ['*'], 'page', $pageNumber); // Added pagination
-    
-            return response()->json($products, 200);
-        }
+    // hiển thị sản phẩm theo danh mục
+    public function getProductsByCategoryUrl($categoryUrl, Request $request) // Added Request $request parameter
+    {
+        // Tìm category dựa trên URL
+        $category = Category::where('url', $categoryUrl)->firstOrFail();
 
+        // Lấy tất cả subcategories của category với id = $category->id
+        $subcategories = Category::where('parent_id', $category->id)->pluck('id');
 
+        // Lấy tất cả sản phẩm thuộc về các subcategories với phân trang
+        $pageSize = $request->input('pageSize', 10); // Mặc định là 10 nếu không có tham số
+        $pageNumber = $request->input('pageNumber', 1); // Mặc định là 1 nếu không có tham số
+
+        $products = Product::with('variants')
+            ->whereIn('category_id', $subcategories)
+            ->paginate($pageSize, ['*'], 'page', $pageNumber); // Added pagination
+
+        return response()->json($products, 200);
+    }
+    public function getProductPrice($id)
+    {
+        $product = Product::findOrFail($id);
+        return response()->json([
+            'message' => 'Product price retrieved successfully.',
+            'data' => [
+                'id' => $product->id,
+                'name' => $product->name,
+                'price' => $product->price,
+            ]
+        ], 200);
+    }
 }
