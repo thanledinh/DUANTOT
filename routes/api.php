@@ -19,7 +19,8 @@ use App\Http\Controllers\Admin\AdminProductsController;
 use App\Http\Controllers\FlashSaleProductController;
 use App\Http\Controllers\ShippingController;
 use App\Models\FlashSaleProduct;
-
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\VNPayController;
 Route::group([
     'middleware' => 'api',
     'prefix' => 'auth'
@@ -116,11 +117,10 @@ Route::get('orders', [OrderController::class, 'index']);
 Route::get('orders/{order_id}', [OrderController::class, 'showOrder']);
 Route::post('orders', [OrderController::class, 'store']);
 Route::get('order-items/{orderId}', [OrderItemController::class, 'showOrderItems']);
-
-// amdin
+Route::get('pending-orders', [OrderController::class, 'showPendingOrder']);
 Route::put('orders/{order_id}', [OrderController::class, 'update']);
 Route::delete('orders/{order_id}', [OrderController::class, 'destroy']);
-Route::get('pending-orders', [OrderController::class, 'showPendingOrder']);
+
 
 //     Route::get('/users', [AdminUserController::class, 'index']);
 //     Route::get('/users/{id}', [AdminUserController::class, 'show']);
@@ -150,3 +150,11 @@ Route::get('/shipping/{order_id}', [ShippingController::class, 'show']);
 Route::post('orders/{order_id}/shipping', [ShippingController::class, 'store']);
     
 Route::get('product/{id}/price', [apiProductController::class, 'getProductPrice']);
+
+
+Route::get('payment/{order_id}', [PaymentController::class, 'getPaymentInfo']);
+Route::get('payment/transaction/{transaction_code}', [PaymentController::class, 'getLatestTransaction']);
+
+Route::post('/create-payment', [VNPayController::class, 'createPayment']);
+Route::get('/payment-return', [VNPayController::class, 'paymentReturn']);
+Route::post('/update-payment-status', [VNPayController::class, 'updatePaymentStatus']);

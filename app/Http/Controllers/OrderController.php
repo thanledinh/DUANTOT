@@ -176,4 +176,21 @@ class OrderController extends Controller
             'orders' => $orders
         ], 200);
     }
+
+    // Xóa đơn hàng có trạng thái pending
+    public function deletePendingOrder($id)
+    {
+        $order = Order::find($id);
+        if (!$order) {
+            return response()->json(['message' => 'Đơn hàng không tồn tại.'], 404);
+        }
+
+        // Kiểm tra trạng thái của đơn hàng
+        if ($order->status !== 'pending') { // Thêm kiểm tra trạng thái
+            return response()->json(['message' => 'Chỉ có thể xóa đơn hàng có trạng thái pending.'], 403);
+        }
+
+        $order->delete();
+        return response()->json(['message' => 'Đơn hàng đã được xóa thành công.'], 200);
+    }
 }

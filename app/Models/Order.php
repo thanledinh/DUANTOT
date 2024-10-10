@@ -15,16 +15,28 @@ class Order extends Model
         'note',
         'order_date' 
     ];    
+
+    // Mối quan hệ với OrderItem
     public function items()
     {
         return $this->hasMany(OrderItem::class, 'order_id');
     }
+
+    // Mối quan hệ với User
     public function user()
     {
         return $this->belongsTo(User::class);
     }
+
+    // Mối quan hệ với Shipping: Mỗi đơn hàng có một bản ghi Shipping
     public function shipping()
     {
-        return $this->belongsTo(Shipping::class);
+        return $this->hasOne(Shipping::class, 'order_id');
+    }
+
+    // Mối quan hệ với Payment: Mỗi đơn hàng có một bản ghi Payment
+    public function payment()
+    {
+        return $this->hasOne(Payment::class, 'order_id');
     }
 }
