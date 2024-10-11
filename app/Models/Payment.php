@@ -22,6 +22,6 @@ class Payment extends Model
     // Mối quan hệ với bảng Orders
     public function order()
     {
-        return $this->belongsTo(Order::class);
+        return $this->belongsTo(Order::class, 'order_id', 'id');
     }
 }

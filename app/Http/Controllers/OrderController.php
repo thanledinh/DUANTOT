@@ -35,7 +35,7 @@ class OrderController extends Controller
     {
         $request->validate([
             'id_promotion' => 'nullable|integer|exists:promotions,id',
-            'payment_method' => 'required|string|in:credit_card,cash_on_delivery,bank_transfer',
+            'payment_method' => 'required|string|in:cash,vnpay',
             'sale' => 'nullable|numeric',
             'note' => 'nullable|string',
             'items' => 'required|array',
@@ -192,5 +192,73 @@ class OrderController extends Controller
 
         $order->delete();
         return response()->json(['message' => 'Đơn hàng đã được xóa thành công.'], 200);
+    }
+
+    // Kiểm tra đơn hàng đã có thông tin shipping hay chưa
+    public function checkShippingInfo($orderId)
+    {
+        $order = Order::find($orderId);
+        
+        if (!$order) {
+            return response()->json(['message' => 'Đơn hàng không tồn tại.'], 404);
+        }
+
+        $hasShipping = $order->shipping()->exists();
+
+        return response()->json([
+            'order_id' => $orderId,
+            'has_shipping_info' => $hasShipping,
+            'message' => $hasShipping ? 'Đơn hàng đã có thông tin shipping.' : 'Đơn hàng chưa có thông tin shipping.'
+        ], 200);
+    }
+
+    // Danh sách đơn hàng của user chưa có shipping
+    public function listOrdersWithoutShipping(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Bạn cần phải đăng nhập để xem đơn hàng.'], 401);
+        }
+
+        $orders = Order::where('user_id', $user->id)
+            ->with('items.product', 'items.variant')
+            ->get();
+
+        $ordersWithoutShipping = [];
+        foreach ($orders as $order) {
+            if (!$order->shipping()->exists()) {
+                $ordersWithoutShipping[] = $order; // Add the entire order
+            }
+        }
+
+        return response()->json([
+            'message' => 'Danh sách đơn hàng chưa có thông tin shipping.',
+            'orders' => $ordersWithoutShipping
+        ], 200);
+    }
+
+    // danh sách các đơn hàng có shipping
+    public function listOrdersWithShipping(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Bạn cần phải đăng nhập để xem đơn hàng.'], 401);
+        }   
+
+        $orders = Order::where('user_id', $user->id)
+            ->with('items.product', 'items.variant')
+            ->get();
+
+        $ordersWithShipping = [];
+        foreach ($orders as $order) {
+            if ($order->shipping()->exists()) {
+                $ordersWithShipping[] = $order; // Add the entire order
+            }
+        }
+
+        return response()->json([
+            'message' => 'Danh sách đơn hàng có thông tin shipping.',
+            'orders' => $ordersWithShipping
+        ], 200);
     }
 }

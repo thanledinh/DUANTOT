@@ -8,7 +8,6 @@ use App\Http\Controllers\apiCategoryController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\FlashSaleController;
-
 use App\Http\Controllers\apiWishlistController;
 use App\Http\Controllers\apiBrandController;
 use App\Http\Controllers\OrderController;
@@ -18,9 +17,10 @@ use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AdminProductsController;
 use App\Http\Controllers\FlashSaleProductController;
 use App\Http\Controllers\ShippingController;
-use App\Models\FlashSaleProduct;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\VNPayController;
+
+// Auth Routes
 Route::group([
     'middleware' => 'api',
     'prefix' => 'auth'
@@ -33,35 +33,36 @@ Route::group([
     Route::post('/profile', [AuthController::class, 'profile'])->middleware('auth:api');
     Route::post('/change-password', [AuthController::class, 'changePassword'])->middleware('auth:api');
     Route::post('/updatecontactinfo', [AuthController::class, 'updateContactInfo'])->middleware('auth:api');
-
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->name('password.email');
-
     Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.reset');
 });
 
-
-
+// Wishlist Routes
 Route::post('/favorites', [apiWishlistController::class, 'store']); // Thêm sản phẩm yêu thích
 Route::get('/favorites', [apiWishlistController::class, 'index']);  // Lấy danh sách yêu thích của người dùng
 Route::delete('/favorites/{id}', [apiWishlistController::class, 'destroy']);
 
-
+// User Info Route
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
+// Admin Routes
 Route::prefix('admin')->group(function () {
-
     Route::get('/products/{productId}/variants', [AdminProductsController::class, 'getProductVariants']);
-
     Route::get('/products/lowest-stock', [AdminProductsController::class, 'getProductsWithLowestStock']);
-
     Route::get('/products/stock-quantity/{minStock}/{maxStock}', [AdminProductsController::class, 'getProductsByStockQuantity']);
-
     Route::put('/products/{productId}/variants/{variantId}/stock-quantity/{newStockQuantity}', [AdminProductsController::class, 'updateStockQuantity']);
 });
 
-// Nhóm các route liên quan đến products
+// Admin Orders Routes
+Route::prefix('admin')->group(function () {
+    Route::get('/orders', [AdminOrdersController::class, 'index']);
+    Route::get('/orders/{pageSize}/{page}', [AdminOrdersController::class, 'show']);    
+    Route::put('/orders/trang-thai/update-multiple', [AdminOrdersController::class, 'updateMultiple']);
+});
+
+// Product Routes
 Route::prefix('products')->group(function () {
     Route::get('/sort', [apiProductController::class, 'sortByPrice']);
     Route::get('/', [apiProductController::class, 'index']);
@@ -79,8 +80,7 @@ Route::prefix('products')->group(function () {
     Route::get('/category/url/{categoryUrl}', [apiProductController::class, 'getProductsByCategoryUrl']);
 });
 
-
-// Nhóm các route liên quan đến variants của product
+// Variant Routes
 Route::prefix('variants')->group(function () {
     Route::get('/', [apiProductVariantController::class, 'index']);
     Route::get('/product_id={product_id}', [apiProductVariantController::class, 'getProductsByProductId']);
@@ -91,6 +91,7 @@ Route::prefix('variants')->group(function () {
     Route::delete('/{id}', [apiProductVariantController::class, 'delete']);
 });
 
+// Category Routes
 Route::get('/categories', [apiCategoryController::class, 'index']);
 Route::get('/categories/{id}', [apiCategoryController::class, 'show']);
 Route::post('/categories', [apiCategoryController::class, 'store']);
@@ -99,20 +100,18 @@ Route::delete('/categories/{id}', [apiCategoryController::class, 'destroy']);
 Route::get('/categorie/subcategories', [apiCategoryController::class, 'getSubcategories']);
 Route::get('/categorie/parent-categories', [apiCategoryController::class, 'getParentCategories']);
 
+// Promotion Routes
 Route::post('/promotion/create', [PromotionController::class, 'create']);
 Route::post('/promotion/check', [PromotionController::class, 'check']);
 
-
-
-
-
+// Brand Routes
 Route::get('/brands', [apiBrandController::class, 'index']);
 Route::get('/brands/{id}', [apiBrandController::class, 'show']);
 Route::post('/brands', [apiBrandController::class, 'store']);
 Route::put('/brands/{id}', [apiBrandController::class, 'update']);
 Route::delete('/brands/{id}', [apiBrandController::class, 'destroy']);
 
-//user
+// Order Routes
 Route::get('orders', [OrderController::class, 'index']);
 Route::get('orders/{order_id}', [OrderController::class, 'showOrder']);
 Route::post('orders', [OrderController::class, 'store']);
@@ -120,41 +119,34 @@ Route::get('order-items/{orderId}', [OrderItemController::class, 'showOrderItems
 Route::get('pending-orders', [OrderController::class, 'showPendingOrder']);
 Route::put('orders/{order_id}', [OrderController::class, 'update']);
 Route::delete('orders/{order_id}', [OrderController::class, 'destroy']);
+Route::get('orders/{order_id}/check-shipping', [OrderController::class, 'checkShippingInfo']);
+Route::get('orders/shipping/list-orders-without-shipping', [OrderController::class, 'listOrdersWithoutShipping']);
+Route::get('orders/shipping/list-orders-with-shipping', [OrderController::class, 'listOrdersWithShipping']);
 
+// Flash Sale Routes
+Route::get('flash-sales', [FlashSaleController::class, 'index']);  
+Route::get('flash-sales/{id}', [FlashSaleController::class, 'show']);  
+Route::post('flash-sales/create', [FlashSaleController::class, 'store']);  
+Route::post('flash-sales/add-product', [FlashSaleProductController::class, 'addProductToFlashSale']);
 
-//     Route::get('/users', [AdminUserController::class, 'index']);
-//     Route::get('/users/{id}', [AdminUserController::class, 'show']);
-//     Route::post('/users', [AdminUserController::class, 'store']);
-//     Route::put('/users/status/{id}', [AdminUserController::class, 'updateStatus']);
-// });
-
+// User Routes
 Route::get('/users', [AdminUserController::class, 'index']);
 Route::get('/users/search', [AdminUserController::class, 'searchUserByName']);
 Route::get('/users/{id}', [AdminUserController::class, 'show']);
 Route::post('/users', [AdminUserController::class, 'store']);
 Route::put('/users/status/{id}', [AdminUserController::class, 'updateStatus']);
 Route::get('/users/{userId}/orders', [AdminUserController::class, 'getOrdersByUser']);
-//flas sale
-Route::get('flash-sales', [FlashSaleController::class, 'index']);  
-Route::get('flash-sales/{id}', [FlashSaleController::class, 'show']);  
-Route::post('flash-sales/create', [FlashSaleController::class, 'store']);  
 
-Route::post('flash-sales/add-product', [FlashSaleProductController::class, 'addProductToFlashSale']);
-
-
-Route::get('admin/orders', [AdminOrdersController::class, 'index']);
-Route::get('admin/orders/{pageSize}/{page}', [AdminOrdersController::class, 'show']);
-
-
+// Shipping Routes
 Route::get('/shipping/{order_id}', [ShippingController::class, 'show']);
 Route::post('orders/{order_id}/shipping', [ShippingController::class, 'store']);
-    
+
+// Price Route
 Route::get('product/{id}/price', [apiProductController::class, 'getProductPrice']);
 
-
+// Payment Routes
 Route::get('payment/{order_id}', [PaymentController::class, 'getPaymentInfo']);
 Route::get('payment/transaction/{transaction_code}', [PaymentController::class, 'getLatestTransaction']);
-
 Route::post('/create-payment', [VNPayController::class, 'createPayment']);
 Route::get('/payment-return', [VNPayController::class, 'paymentReturn']);
 Route::post('/update-payment-status', [VNPayController::class, 'updatePaymentStatus']);
