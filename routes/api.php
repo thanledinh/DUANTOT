@@ -19,6 +19,7 @@ use App\Http\Controllers\FlashSaleProductController;
 use App\Http\Controllers\ShippingController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\VNPayController;
+use App\Http\Controllers\ai\BoxChatAIController;
 
 // Auth Routes
 Route::group([
@@ -150,3 +151,7 @@ Route::get('payment/transaction/{transaction_code}', [PaymentController::class, 
 Route::post('/create-payment', [VNPayController::class, 'createPayment']);
 Route::get('/payment-return', [VNPayController::class, 'paymentReturn']);
 Route::post('/update-payment-status', [VNPayController::class, 'updatePaymentStatus']);
+
+
+// AI Routes
+Route::post('/ai/search-product', [BoxChatAIController::class, 'searchProduct']);
