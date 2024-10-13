@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Category;
+use Illuminate\Support\Facades\Cache;
 
 
 
@@ -232,9 +233,11 @@ class apiProductController extends Controller
     public function getLatestProducts(Request $request)
     {
         // Lấy 10 sản phẩm mới nhất, có thể thay đổi số lượng theo nhu cầu
-        $latestProducts = Product::orderBy('created_at', 'desc') // Sắp xếp theo thời gian tạo
+        $latestProducts = Product::with('variants') // Eager load variants
+            ->orderBy('created_at', 'desc') // Sắp xếp theo thời gian tạo
             ->take(10)
-            ->get();
+            ->get()
+            ->makeHidden(['description']); // Hide the description field
 
         return response()->json($latestProducts);
     }
@@ -242,14 +245,61 @@ class apiProductController extends Controller
 
     public function getHotProducts(Request $request)
     {
-
-        $hotProducts = Product::withCount('wishlists') // Đếm số lượng wishlist cho mỗi sản phẩm
-            ->orderBy('wishlists_count', 'desc') // Sắp xếp theo số lượng wishlist
-            ->take(10)
-            ->get();
-
+        $hotProducts = Cache::remember('hot_products', 60, function () {
+            return Product::with('variants:id,product_id,price,stock_quantity,image')
+                ->select('id', 'name', 'hot', 'image')
+                ->where('hot', 1)
+                ->orderBy('created_at', 'desc')
+                ->take(10)
+                ->get();
+        });
+    
         return response()->json($hotProducts);
     }
+    public function removeMultipleHotStatus(Request $request)
+    {
+        // Lấy danh sách ID từ query string (hot-status=3,4,5)
+        $productIds = explode(',', $request->query('hot-status'));
+    
+        // Tìm các sản phẩm có ID trong danh sách
+        $products = Product::whereIn('id', $productIds)->get();
+    
+        if ($products->isEmpty()) {
+            return response()->json(['message' => 'No products found for the given IDs'], 404);
+        }
+    
+        // Cập nhật trạng thái hot = 0 cho tất cả các sản phẩm tìm thấy
+        foreach ($products as $product) {
+            $product->hot = 0; // Cập nhật trạng thái hot thành 0 (gỡ bỏ)
+            $product->save(); // Lưu thay đổi
+        }
+    
+        return response()->json(['message' => 'Hot status removed successfully', 'products' => $products]);
+    }
+    
+    
+
+    public function updateMultipleHotStatus(Request $request)
+    {
+        // Lấy danh sách ID từ query string (ví dụ: hot-status=3,4,5)
+        $productIds = explode(',', $request->query('hot-status'));
+
+        // Tìm các sản phẩm có ID trong danh sách
+        $products = Product::whereIn('id', $productIds)->get();
+
+        if ($products->isEmpty()) {
+            return response()->json(['message' => 'No products found for the given IDs'], 404);
+        }
+
+        // Cập nhật trạng thái hot cho tất cả các sản phẩm tìm thấy
+        foreach ($products as $product) {
+            $product->hot = 1; // Cập nhật trạng thái hot thành 1
+            $product->save(); // Lưu thay đổi
+        }
+
+        return response()->json(['message' => 'Products hot status updated successfully', 'products' => $products]);
+    }
+
 
     public function getBestSellingProducts(Request $request)
     {
@@ -307,4 +357,5 @@ class apiProductController extends Controller
             ]
         ], 200);
     }
+
 }

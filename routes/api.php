@@ -54,6 +54,8 @@ Route::prefix('admin')->group(function () {
     Route::get('/products/lowest-stock', [AdminProductsController::class, 'getProductsWithLowestStock']);
     Route::get('/products/stock-quantity/{minStock}/{maxStock}', [AdminProductsController::class, 'getProductsByStockQuantity']);
     Route::put('/products/{productId}/variants/{variantId}/stock-quantity/{newStockQuantity}', [AdminProductsController::class, 'updateStockQuantity']);
+    Route::put('/products/hot-status', [apiProductController::class, 'updateMultipleHotStatus']);
+    Route::put('/products/remove-hot-status', [apiProductController::class, 'removeMultipleHotStatus']);
 });
 
 // Admin Orders Routes
@@ -68,7 +70,9 @@ Route::prefix('products')->group(function () {
     Route::get('/sort', [apiProductController::class, 'sortByPrice']);
     Route::get('/', [apiProductController::class, 'index']);
     Route::get('/latest', [apiProductController::class, 'getLatestProducts']);
+
     Route::get('/hot', [apiProductController::class, 'getHotProducts']);
+
     Route::get('/best-selling', [apiProductController::class, 'getBestSellingProducts']);
     Route::get('/products_paginate', [apiProductController::class, 'products_paginate']);
     Route::get('/{id}', [apiProductController::class, 'show']);
