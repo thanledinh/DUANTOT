@@ -82,7 +82,7 @@ Route::prefix('products')->group(function () {
     Route::delete('/{id}', [apiProductController::class, 'delete']);
     Route::get('/search/{query}', [apiProductController::class, 'search']);
     Route::get('/{id}/related', [apiProductController::class, 'relatedProducts']);
-    Route::get('/category/{categoryId}', [apiProductController::class, 'getProductsByCategory']);
+    Route::get('/category/{categoryUrl}', [apiProductController::class, 'getProductsCategoryUrl']);
     Route::get('/category/url/{categoryUrl}', [apiProductController::class, 'getProductsByCategoryUrl']);
 });
 

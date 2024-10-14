@@ -313,11 +313,14 @@ class apiProductController extends Controller
     }
 
     // hiển thị sản phẩm theo danh mục
-    public function getProductsByCategory($categoryId)
+    public function getProductsCategoryUrl($categoryUrl, Request $request) // Added Request $request parameter
     {
-        // Lấy tất cả sản phẩm thuộc về category với id = $categoryId
+        // Tìm category dựa trên URL
+        $category = Category::where('url', $categoryUrl)->firstOrFail();
+
+        // Lấy tất cả sản phẩm thuộc về category với id = $category->id
         $products = Product::with('variants')
-            ->where('category_id', $categoryId) // Changed to use category_id directly
+            ->where('category_id', $category->id) // Changed to use category_id from the found category
             ->get();
 
         return response()->json($products, 200);
