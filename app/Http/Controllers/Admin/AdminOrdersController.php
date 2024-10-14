@@ -35,7 +35,7 @@ class AdminOrdersController extends Controller
     public function updateMultiple(Request $request)
     {
         // Định nghĩa danh sách trạng thái hợp lệ
-        $validStatuses = ['preparing', 'shipping', 'delivered', 'cancelled', 'returned'];
+        $validStatuses = ['Đang vận chuyển', 'Đã giao hàng', 'Đã hủy', 'Đã trả hàng'];
 
         // Xác thực yêu cầu
         $request->validate([

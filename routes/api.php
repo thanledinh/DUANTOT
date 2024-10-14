@@ -20,6 +20,7 @@ use App\Http\Controllers\ShippingController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\VNPayController;
 use App\Http\Controllers\ai\BoxChatAIController;
+use App\Http\Controllers\Admin\StatisticsController;
 
 // Auth Routes
 Route::group([
@@ -159,3 +160,16 @@ Route::post('/update-payment-status', [VNPayController::class, 'updatePaymentSta
 
 // AI Routes
 Route::post('/ai/search-product', [BoxChatAIController::class, 'searchProduct']);
+
+
+
+// thông kê 
+Route::get('/statistics/monthly/{year}', [StatisticsController::class, 'getMonthlyStatistics']);
+Route::get('/statistics/daily/{monthYear}', [StatisticsController::class, 'getDailyStatistics']);
+
+Route::get('/statistics/total-users', [StatisticsController::class, 'getTotalUsers']);
+Route::get('/statistics/total-orders', [StatisticsController::class, 'getTotalOrders']);
+Route::get('/statistics/total-products', [StatisticsController::class, 'getTotalProducts']);
+
+Route::get('/statistics/orders-by-status', [StatisticsController::class, 'getOrdersByStatus']);
+

@@ -172,7 +172,7 @@ class VNPayController extends Controller
         if ($order) {
             $order->update([
                 'payment_method' => 'VNPAY', // Set payment method to VNPAY
-                'status' => 'payment successful', // Set status to paid
+                'status' => 'Tiếp nhận', // Set status to paid
             ]);
         }
 

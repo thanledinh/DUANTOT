@@ -53,6 +53,11 @@ class ShippingController extends Controller
             $shipping->shipping_status = 'pending';
             $shipping->save();
 
+            // Cập nhật trạng thái đơn hàng
+            $order->update([
+                'status' => 'Tiếp nhận', // Set status to paid
+            ]);
+
             return response()->json([
                 'message' => 'Thông tin vận chuyển đã được thêm thành công.',
                 'shipping' => $shipping
