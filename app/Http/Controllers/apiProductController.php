@@ -315,12 +315,9 @@ class apiProductController extends Controller
     // hiển thị sản phẩm theo danh mục
     public function getProductsByCategory($categoryId)
     {
-        // Lấy tất cả subcategories của category với id = $categoryId
-        $subcategories = Category::where('parent_id', $categoryId)->pluck('id');
-
-        // Lấy tất cả sản phẩm thuộc về các subcategories
+        // Lấy tất cả sản phẩm thuộc về category với id = $categoryId
         $products = Product::with('variants')
-            ->whereIn('category_id', $subcategories)
+            ->where('category_id', $categoryId) // Changed to use category_id directly
             ->get();
 
         return response()->json($products, 200);
