@@ -92,6 +92,8 @@ class OrderController extends Controller
                     'price' => $item['price'],
                 ]);
             }
+            Mail::to($request->user()->email)->send(new OrderConfirmation($order));
+
             return response()->json([
                 'message' => 'Đơn hàng đã được tạo thành công.',
                 'order' => $order,
