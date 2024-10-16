@@ -354,5 +354,19 @@ class apiProductController extends Controller
             ]
         ], 200);
     }
+    public function getProductsByBrand($brandNames)
+    {
+        // Tách danh sách tên thương hiệu thành mảng
+        $brandNamesArray = explode(',', $brandNames);
 
+        // Tìm tất cả các thương hiệu dựa trên tên
+        $brands = Brand::whereIn('name', $brandNamesArray)->get();
+
+        // Lấy tất cả các ID của thương hiệu
+        $brandIds = $brands->pluck('id');
+
+        // Lấy sản phẩm theo danh sách brand_id
+        $products = Product::with('variants')->whereIn('brand_id', $brandIds)->get();
+        return response()->json($products);
+    }
 }

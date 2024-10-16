@@ -4,36 +4,77 @@ namespace App\Http\Controllers;
 
 use App\Models\FlashSaleProduct;
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
 
 class FlashSaleProductController extends Controller
 {
-    // API để thêm sản phẩm vào Flash Sale
-    public function addProductToFlashSale(Request $request)
+    public function addProductFlashSale(Request $request)
     {
-        // Validate request để đảm bảo flash_sale_id và product_id hợp lệ
-        $request->validate([
+        // $this->authorize('isAdmin'); 
+        $validatedData = $request->validate([
             'flash_sale_id' => 'required|exists:flash_sales,id',
             'product_id' => 'required|exists:products,id',
-            'discount_price' => 'required|numeric',
-            'original_price' => 'required|numeric',
-            'quantity_limit_per_customer' => 'nullable|integer',
-            'stock_quantity' => 'required|integer',
+            'discount_price' => 'required|numeric|min:0',
+            'original_price' => 'required|numeric|min:0',
+            'quantity_limit_per_customer' => 'nullable|integer|min:1',
+            'stock_quantity' => 'required|integer|min:0',
         ]);
-
-        // Tạo mới bản ghi trong bảng flash_sales_products
-        $flashSaleProduct = FlashSaleProduct::create([
-            'flash_sale_id' => $request->flash_sale_id,
-            'product_id' => $request->product_id,
-            'discount_price' => $request->discount_price,
-            'original_price' => $request->original_price,
-            'quantity_limit_per_customer' => $request->quantity_limit_per_customer,
-            'stock_quantity' => $request->stock_quantity,
+        try {
+            $flashSaleProduct = FlashSaleProduct::create(
+                $validatedData
+            );
+            return response()->json([
+                'message' => 'Sản phẩm đã được thêm vào Flash Sale thành công.',
+                'data' => $flashSaleProduct
+            ], 201);
+        } catch (QueryException $e) {
+            return response()->json([
+                'message' => 'Có lỗi xảy ra khi thêm sản phẩm.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+    public function updateProductFlashSale(Request $request, $id)
+    {
+        // $this->authorize('isAdmin'); 
+        $validatedData = $request->validate([
+            'discount_price' => 'nullable|numeric|min:0',
+            'original_price' => 'nullable|numeric|min:0',
+            'quantity_limit_per_customer' => 'nullable|integer|min:1',
+            'stock_quantity' => 'nullable|integer|min:0',
         ]);
-
-        // Trả về response với dữ liệu đã lưu
-        return response()->json([
-            'message' => 'Product added to Flash Sale successfully.',
-            'data' => $flashSaleProduct
-        ], 201);
+        $flashSaleProduct = FlashSaleProduct::find($id);
+        if (!$flashSaleProduct) {
+            return response()->json(['message' => 'Sản phẩm không tồn tại trong Flash Sale.'], 404);
+        }
+        try {
+            $flashSaleProduct->update($validatedData);
+            return response()->json([
+                'message' => 'Thông tin sản phẩm đã được cập nhật thành công.',
+                'data' => $flashSaleProduct
+            ], 200);
+        } catch (QueryException $e) {
+            return response()->json([
+                'message' => 'Có lỗi xảy ra khi cập nhật sản phẩm.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+    public function deleteProductFlashSale($id)
+    {
+        // $this->authorize('isAdmin'); 
+        $flashSaleProduct = FlashSaleProduct::find($id);
+        if (!$flashSaleProduct) {
+            return response()->json(['message' => 'Sản phẩm không tồn tại trong Flash Sale.'], 404);
+        }
+        try {
+            $flashSaleProduct->delete();
+            return response()->json(['message' => 'Sản phẩm đã được xóa khỏi Flash Sale.'], 200);
+        } catch (QueryException $e) {
+            return response()->json([
+                'message' => 'Có lỗi xảy ra khi xóa sản phẩm.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

@@ -44,13 +44,13 @@ class OrderController extends Controller
             'items.*.price' => 'required|numeric|min:0',
             'items.*.variant_id' => 'required|integer|min:1',
         ]);
+    
         try {
             $total_price = 0;
             foreach ($request->items as $item) {
                 $total_price += $item['price'] * $item['quantity'];
             }
-
-            $order = new Order();
+                $order = new Order();
             if (auth()->guard('api')->check()) {
                 $order->user_id = auth()->guard('api')->id();
             } else {
@@ -65,25 +65,27 @@ class OrderController extends Controller
             $order->sale = $request->sale ?? 0;
             $order->note = $request->note ?? null;
             $shipping_cost = 40000;
-            if ($request->id_promotion) {
+                if ($request->id_promotion) {
                 $promotion = Promotion::find($request->id_promotion);
                 if ($promotion) {
                     if ($total_price >= $promotion->minimum_order_value) {
                         if ($promotion->discount_percentage) {
                             $discount = ($total_price * $promotion->discount_percentage) / 100;
                             $order->total_price -= $discount;
-                        } elseif ($promotion->discount_amount) {
+                        }
+                        elseif ($promotion->discount_amount) {
                             $order->total_price -= $promotion->discount_amount;
                         }
-                        if ($promotion->free_shipping) {
+                            if ($promotion->free_shipping) {
                             $shipping_cost = 0;
                         }
-                        $order->total_price = max(0, $order->total_price);
+                            $order->total_price = max(0, $order->total_price);
                     }
                 }
             }
-            $order->save();
-            foreach ($request->items as $item) {
+                $order->total_price += $shipping_cost;
+                $order->save();
+                foreach ($request->items as $item) {
                 OrderItem::create([
                     'order_id' => $order->id,
                     'product_id' => $item['product_id'],
@@ -97,6 +99,7 @@ class OrderController extends Controller
                 'order' => $order,
                 'shipping_cost' => $shipping_cost
             ], 201);
+    
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Đã xảy ra lỗi khi tạo đơn hàng.',
@@ -104,6 +107,7 @@ class OrderController extends Controller
             ], 500);
         }
     }
+
     public function update(Request $request, $id)
     {
         $user = $request->user();
