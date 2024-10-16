@@ -46,14 +46,11 @@ class OrderController extends Controller
         ]);
     
         try {
-            // Tính tổng giá trị đơn hàng từ các sản phẩm
             $total_price = 0;
             foreach ($request->items as $item) {
                 $total_price += $item['price'] * $item['quantity'];
             }
-    
-            // Tạo mới đơn hàng
-            $order = new Order();
+                $order = new Order();
             if (auth()->guard('api')->check()) {
                 $order->user_id = auth()->guard('api')->id();
             } else {
@@ -110,8 +107,6 @@ class OrderController extends Controller
             ], 500);
         }
     }
-    
-
 
     public function update(Request $request, $id)
     {
