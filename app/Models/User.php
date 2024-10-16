@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 
 class User extends Authenticatable implements JWTSubject
@@ -66,5 +67,19 @@ class User extends Authenticatable implements JWTSubject
     /**
      * Quan hệ với các sản phẩm đã yêu thích
      */
+
+
+     public function is_admin()
+     {
+         return $this->user_type === 'admin'; // Giả sử 'admin' là giá trị xác định quyền admin
+     }
+
+
+     public function notifications()
+     {
+         return $this->belongsToMany(Notification::class, 'user_notifications')
+                     ->withPivot('status')
+                     ->withTimestamps();
+     }
    
 }

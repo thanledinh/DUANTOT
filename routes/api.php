@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\apiProductController;
 use App\Http\Controllers\apiProductVariantController;
 use App\Http\Controllers\apiCategoryController;
+use App\Http\Controllers\apiProductReviewController;
+use App\Http\Controllers\apiNotificationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\FlashSaleController;
@@ -104,6 +106,21 @@ Route::put('/categories/{id}', [apiCategoryController::class, 'update']);
 Route::delete('/categories/{id}', [apiCategoryController::class, 'destroy']);
 Route::get('/categorie/subcategories', [apiCategoryController::class, 'getSubcategories']);
 Route::get('/categorie/parent-categories', [apiCategoryController::class, 'getParentCategories']);
+
+// Product Review
+Route::post('/product-reviews', [apiProductReviewController::class, 'store']);
+Route::get('/products/{productId}/reviews', [apiProductReviewController::class, 'index']);
+Route::get('/product-reviews', [apiProductReviewController::class, 'showProduct_reviewforUsser']);
+Route::get('/admin/product-reviews', [apiProductReviewController::class, 'showProduct_reviewforAdmin']);
+Route::post('/product-reviews/{id}/hide', [apiProductReviewController::class, 'hide']);
+Route::delete('/product-reviews/{id}', [apiProductReviewController::class, 'destroy']);
+
+// Notifications
+Route::post('/notifications', [apiNotificationController::class, 'createNotification']);
+Route::get('/notifications', [apiNotificationController::class, 'getUserNotifications']);
+Route::get('/admin/notifications', [apiNotificationController::class, 'showAllNotifications']);
+Route::put('/notifications/{id}/read', [apiNotificationController::class, 'markAsRead']);
+Route::delete('/notifications/{id}', [apiNotificationController::class, 'destroy']);
 
 // Promotion Routes
 Route::post('/promotion/create', [PromotionController::class, 'create']);
