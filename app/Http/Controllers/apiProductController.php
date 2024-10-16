@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Category;
 use Illuminate\Support\Facades\Cache;
+use App\Models\Brand;
 
 
 
@@ -313,17 +314,6 @@ class apiProductController extends Controller
     }
 
     // hiển thị sản phẩm theo danh mục
-    public function getProductsByCategory($categoryId)
-    {
-        // Lấy tất cả sản phẩm thuộc về category với id = $categoryId
-        $products = Product::with('variants')
-            ->where('category_id', $categoryId) // Changed to use category_id directly
-            ->get();
-
-        return response()->json($products, 200);
-    }
-
-    // hiển thị sản phẩm theo danh mục
     public function getProductsByCategoryUrl($categoryUrl, Request $request) // Added Request $request parameter
     {
         // Tìm category dựa trên URL
@@ -332,13 +322,21 @@ class apiProductController extends Controller
         // Lấy tất cả subcategories của category với id = $category->id
         $subcategories = Category::where('parent_id', $category->id)->pluck('id');
 
-        // Lấy tất cả sản phẩm thuộc về các subcategories với phân trang
+        // Lấy tất cả sản phẩm thuộc về category hoặc subcategories với phân trang
         $pageSize = $request->input('pageSize', 10); // Mặc định là 10 nếu không có tham số
         $pageNumber = $request->input('pageNumber', 1); // Mặc định là 1 nếu không có tham số
 
-        $products = Product::with('variants')
-            ->whereIn('category_id', $subcategories)
-            ->paginate($pageSize, ['*'], 'page', $pageNumber); // Added pagination
+        if ($subcategories->isNotEmpty()) {
+            // Nếu có subcategories, lấy sản phẩm từ subcategories
+            $products = Product::with('variants')
+                ->whereIn('category_id', $subcategories)
+                ->paginate($pageSize, ['*'], 'page', $pageNumber);
+        } else {
+            // Nếu không có subcategories, lấy sản phẩm từ category hiện tại
+            $products = Product::with('variants')
+                ->where('category_id', $category->id)
+                ->paginate($pageSize, ['*'], 'page', $pageNumber);
+        }
 
         return response()->json($products, 200);
     }
@@ -354,7 +352,9 @@ class apiProductController extends Controller
             ]
         ], 200);
     }
-    public function getProductsByBrand($brandNames)
+
+    // lấy sản phẩm theo brand name
+    public function getProductsByBrand($brandNames, Request $request) // Added Request $request parameter
     {
         // Tách danh sách tên thương hiệu thành mảng
         $brandNamesArray = explode(',', $brandNames);
@@ -365,8 +365,12 @@ class apiProductController extends Controller
         // Lấy tất cả các ID của thương hiệu
         $brandIds = $brands->pluck('id');
 
-        // Lấy sản phẩm theo danh sách brand_id
-        $products = Product::with('variants')->whereIn('brand_id', $brandIds)->get();
+        // Lấy sản phẩm theo danh sách brand_id với phân trang
+        $pageSize = $request->input('pageSize', 10); // Mặc định là 10 nếu không có tham số
+        $pageNumber = $request->input('pageNumber', 1); // Mặc định là 1 nếu không có tham số
+
+        $products = Product::with('variants')->whereIn('brand_id', $brandIds)->paginate($pageSize, ['*'], 'page', $pageNumber);
         return response()->json($products);
     }
+
 }
