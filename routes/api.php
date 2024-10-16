@@ -20,6 +20,7 @@ use App\Http\Controllers\ShippingController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\VNPayController;
 use App\Http\Controllers\ai\BoxChatAIController;
+use App\Http\Controllers\BrandController;
 
 // Auth Routes
 Route::group([
@@ -83,6 +84,8 @@ Route::prefix('products')->group(function () {
     Route::get('/{id}/related', [apiProductController::class, 'relatedProducts']);
     Route::get('/category/{categoryId}', [apiProductController::class, 'getProductsByCategory']);
     Route::get('/category/url/{categoryUrl}', [apiProductController::class, 'getProductsByCategoryUrl']);
+    
+    Route::get('/brand/{brandName}', [apiProductController::class, 'getProductsByBrand']);
 });
 
 // Variant Routes
@@ -159,3 +162,12 @@ Route::post('/update-payment-status', [VNPayController::class, 'updatePaymentSta
 
 // AI Routes
 Route::post('/ai/search-product', [BoxChatAIController::class, 'searchProduct']);
+
+// Route để lấy tất cả thương hiệu
+Route::get('/brands', [BrandController::class, 'index']);
+
+// Route để lấy chi tiết một thương hiệu
+Route::get('/brands/{brand}', [BrandController::class, 'show']);
+
+// Route để lấy sản phẩm theo nhiều thương hiệu
+Route::get('/brand/{brandName}', [BrandController::class, 'getProductsByBrand']);
