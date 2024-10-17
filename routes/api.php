@@ -127,8 +127,11 @@ Route::put('/notifications/{id}/read', [apiNotificationController::class, 'markA
 Route::delete('/notifications/{id}', [apiNotificationController::class, 'destroy']);
 
 // Promotion Routes
+Route::get('/promotion', [PromotionController::class, 'index']);
 Route::post('/promotion/create', [PromotionController::class, 'create']);
 Route::post('/promotion/check', [PromotionController::class, 'check']);
+Route::put('/promotion/{id}', [PromotionController::class, 'update']);
+Route::delete('/promotion/{id}', [PromotionController::class, 'destroy']);
 
 // Brand Routes
 Route::get('/brands', [apiBrandController::class, 'index']);

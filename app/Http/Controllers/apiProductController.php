@@ -305,7 +305,7 @@ class apiProductController extends Controller
     public function getBestSellingProducts(Request $request)
     {
 
-        $bestSellingProducts = Product::withCount('orderItems') // Đếm số lượng đơn hàng cho mỗi sản phẩm
+        $bestSellingProducts = Product::with('variants')->withCount('orderItems') // Đếm số lượng đơn hàng cho mỗi sản phẩm
             ->orderBy('order_items_count', 'desc') // Sắp xếp theo số lượng đơn hàng
             ->take(10)
             ->get();
