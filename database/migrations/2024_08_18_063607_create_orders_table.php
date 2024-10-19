@@ -20,6 +20,7 @@ class CreateOrdersTable extends Migration
             $table->timestamps();
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->foreign('id_promotion')->references('id')->on('promotions')->onDelete('set null');
+            $table->string('tracking_code')->unique()->nullable(); 
         });
     }
 

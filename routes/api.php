@@ -127,11 +127,13 @@ Route::put('/notifications/{id}/read', [apiNotificationController::class, 'markA
 Route::delete('/notifications/{id}', [apiNotificationController::class, 'destroy']);
 
 // Promotion Routes
-Route::get('/promotion', [PromotionController::class, 'index']);
-Route::post('/promotion/create', [PromotionController::class, 'create']);
-Route::post('/promotion/check', [PromotionController::class, 'check']);
-Route::put('/promotion/{id}', [PromotionController::class, 'update']);
-Route::delete('/promotion/{id}', [PromotionController::class, 'destroy']);
+Route::prefix('admin')->group(function () {
+    Route::get('/promotion', [PromotionController::class, 'index']);
+    Route::post('/promotion/create', [PromotionController::class, 'create']);
+    Route::post('/promotion/check', [PromotionController::class, 'check']);
+    Route::put('/promotion/{id}', [PromotionController::class, 'update']);
+    Route::delete('/promotion/{id}', [PromotionController::class, 'destroy']);
+});
 
 // Brand Routes
 Route::get('/brands', [apiBrandController::class, 'index']);
@@ -152,11 +154,20 @@ Route::get('orders/{order_id}/check-shipping', [OrderController::class, 'checkSh
 Route::get('orders/shipping/list-orders-without-shipping', [OrderController::class, 'listOrdersWithoutShipping']);
 Route::get('orders/shipping/list-orders-with-shipping', [OrderController::class, 'listOrdersWithShipping']);
 
-// Flash Sale Routes
-Route::get('flash-sales', [FlashSaleController::class, 'index']);  
+// Flash Sale Routes 
+Route::get('flash-sales/show-by-date', [FlashSaleController::class, 'showFlashSaleByDate']);
+Route::get('flash-sales/{id}/products-and-variants', [FlashSaleProductController::class, 'showFlashSaleWithProductsAndVariants']);
+
+Route::get('flash-sales', [FlashSaleController::class, 'index']);
+Route::get('flash-sales/{id}/products', [FlashSaleController::class, 'showFlashSaleWithProducts']);
 Route::get('flash-sales/{id}', [FlashSaleController::class, 'show']);  
-Route::post('flash-sales/create', [FlashSaleController::class, 'store']);  
+Route::post('flash-sales/create', [FlashSaleController::class, 'store']);
+Route::put('flash-sales/update/{id}', [FlashSaleController::class, 'update']);
+Route::delete('flash-sales/delete/{id}', [FlashSaleController::class, 'destroy']);
+
 Route::post('flash-sales/add-product', [FlashSaleProductController::class, 'addProductToFlashSale']);
+Route::put('flash-sales/update-product/{id}', [FlashSaleProductController::class, 'updateProductFlashSale']);
+Route::delete('flash-sales/delete-product/{id}', [FlashSaleProductController::class, 'deleteProductFlashSale']);
 
 // User Routes
 Route::get('/users', [AdminUserController::class, 'index']);
@@ -180,11 +191,8 @@ Route::post('/create-payment', [VNPayController::class, 'createPayment']);
 Route::get('/payment-return', [VNPayController::class, 'paymentReturn']);
 Route::post('/update-payment-status', [VNPayController::class, 'updatePaymentStatus']);
 
-
 // AI Routes
 Route::post('/ai/search-product', [BoxChatAIController::class, 'searchProduct']);
-
-
 
 // thông kê 
 Route::get('/statistics/monthly/{year}', [StatisticsController::class, 'getMonthlyStatistics']);

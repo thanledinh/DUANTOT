@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Promotion;
 use Illuminate\Http\Request;
+use App\Models\ProductVariant;
 
 class OrderController extends Controller
 {
@@ -44,13 +45,13 @@ class OrderController extends Controller
             'items.*.price' => 'required|numeric|min:0',
             'items.*.variant_id' => 'required|integer|min:1',
         ]);
-    
+
         try {
             $total_price = 0;
             foreach ($request->items as $item) {
                 $total_price += $item['price'] * $item['quantity'];
             }
-                $order = new Order();
+            $order = new Order();
             if (auth()->guard('api')->check()) {
                 $order->user_id = auth()->guard('api')->id();
             } else {
@@ -65,27 +66,26 @@ class OrderController extends Controller
             $order->sale = $request->sale ?? 0;
             $order->note = $request->note ?? null;
             $shipping_cost = 40000;
-                if ($request->id_promotion) {
+            if ($request->id_promotion) {
                 $promotion = Promotion::find($request->id_promotion);
                 if ($promotion) {
                     if ($total_price >= $promotion->minimum_order_value) {
                         if ($promotion->discount_percentage) {
                             $discount = ($total_price * $promotion->discount_percentage) / 100;
                             $order->total_price -= $discount;
-                        }
-                        elseif ($promotion->discount_amount) {
+                        } elseif ($promotion->discount_amount) {
                             $order->total_price -= $promotion->discount_amount;
                         }
-                            if ($promotion->free_shipping) {
+                        if ($promotion->free_shipping) {
                             $shipping_cost = 0;
                         }
-                            $order->total_price = max(0, $order->total_price);
+                        $order->total_price = max(0, $order->total_price);
                     }
                 }
             }
-                $order->total_price += $shipping_cost;
-                $order->save();
-                foreach ($request->items as $item) {
+            $order->total_price += $shipping_cost;
+            $order->save();
+            foreach ($request->items as $item) {
                 OrderItem::create([
                     'order_id' => $order->id,
                     'product_id' => $item['product_id'],
@@ -93,13 +93,18 @@ class OrderController extends Controller
                     'variant_id' => $item['variant_id'],
                     'price' => $item['price'],
                 ]);
+                // Reduce stock quantity in product_variants
+                $variant = ProductVariant::find($item['variant_id']); // Get the product variant
+                if ($variant) {
+                    $variant->stock_quantity -= $item['quantity']; // Adjust stock quantity
+                    $variant->save(); // Save the updated variant
+                }
             }
             return response()->json([
                 'message' => 'Đơn hàng đã được tạo thành công.',
                 'order' => $order,
                 'shipping_cost' => $shipping_cost
             ], 201);
-    
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Đã xảy ra lỗi khi tạo đơn hàng.',
@@ -116,7 +121,7 @@ class OrderController extends Controller
         }
         $order = Order::where('user_id', $user->id)->find($id);
         if (!$order) {
-            return response()->json(['message' => 'Đơn hàng không tồn tại hoặc không thuộc về người dùng.'], 404);
+            return response()->json(['message' => 'Đơn hàng không tồn tại hoặc không thuộc về người d��ng.'], 404);
         }
         if ($order->status == 'processed' || $order->status == 'completed') {
             return response()->json(['message' => 'Không thể thay đổi trạng thái của đơn hàng đã được xử lý hoặc hoàn thành.'], 403);
@@ -156,6 +161,15 @@ class OrderController extends Controller
         if ($order->user_id !== $request->user()->id) {
             return response()->json(['message' => 'Bạn không có quyền xóa đơn hàng này.'], 403);
         }
+
+        // {{ edit_1 }} - Hoàn lại stock quantity cho từng item trong đơn hàng
+        foreach ($order->items as $item) {
+            $variant = ProductVariant::find($item->variant_id); // Get the product variant
+            if ($variant) {
+                $variant->stock_quantity += $item->quantity; // Restore stock quantity
+                $variant->save(); // Save the updated variant
+            }
+        }
         $order->delete();
         return response()->json(['message' => 'Đơn hàng đã được xóa thành công.'], 200);
     }
@@ -194,6 +208,15 @@ class OrderController extends Controller
             return response()->json(['message' => 'Chỉ có thể xóa đơn hàng có trạng thái pending.'], 403);
         }
 
+        // {{ edit_1 }} - Hoàn lại stock quantity cho từng item trong đơn hàng
+        foreach ($order->items as $item) {
+            $variant = ProductVariant::find($item->variant_id); // Get the product variant
+            if ($variant) {
+                $variant->stock_quantity += $item->quantity; // Restore stock quantity
+                $variant->save(); // Save the updated variant
+            }
+        }
+
         $order->delete();
         return response()->json(['message' => 'Đơn hàng đã được xóa thành công.'], 200);
     }
@@ -202,7 +225,7 @@ class OrderController extends Controller
     public function checkShippingInfo($orderId)
     {
         $order = Order::find($orderId);
-        
+
         if (!$order) {
             return response()->json(['message' => 'Đơn hàng không tồn tại.'], 404);
         }
@@ -247,7 +270,7 @@ class OrderController extends Controller
         $user = $request->user();
         if (!$user) {
             return response()->json(['message' => 'Bạn cần phải đăng nhập để xem đơn hàng.'], 401);
-        }   
+        }
 
         $orders = Order::where('user_id', $user->id)
             ->with('items.product', 'items.variant')

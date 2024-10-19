@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\Promotion;
 use App\Models\Shipping;
+
 use Illuminate\Http\Request;
 
 class ShippingController extends Controller
@@ -19,6 +20,7 @@ class ShippingController extends Controller
                 'city' => 'required|string|max:255',
                 'district' => 'required|string|max:255',
                 'phone' => 'required|string|max:15',
+                'ward' => 'required|string|max:255',
                 'shipping_method' => 'required|string',
             ]);
             $order = Order::find($order_id);
@@ -49,6 +51,7 @@ class ShippingController extends Controller
             $shipping->district = $request->district;
             $shipping->phone = $request->phone;
             $shipping->shipping_method = $request->shipping_method;
+            $shipping->ward = $request->ward;
             $shipping->shipping_cost = $shipping_cost;
             $shipping->shipping_status = 'pending';
             $shipping->save();
@@ -57,6 +60,8 @@ class ShippingController extends Controller
             $order->update([
                 'status' => 'Tiếp nhận', // Set status to paid
             ]);
+
+
 
             return response()->json([
                 'message' => 'Thông tin vận chuyển đã được thêm thành công.',

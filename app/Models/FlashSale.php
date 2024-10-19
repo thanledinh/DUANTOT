@@ -12,7 +12,6 @@ class FlashSale extends Model
     protected $fillable = [
         'start_time', 
         'end_time', 
-        'discount_percentage', 
         'max_discount', 
         'status',
     ];

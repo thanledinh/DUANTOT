@@ -10,7 +10,23 @@ class PromotionController extends Controller
     // Tạo mới mã khuyến mãi
     public function create(Request $request)
     {
-        $promotion = Promotion::create($request->all());
+        $data = $request->validate([
+            'code' => 'required|string|max:255|unique:promotions,code',
+            'description' => 'required|string',
+            'discount_percentage' => 'nullable|numeric|min:0|max:100',
+            'discount_amount' => 'nullable|numeric|min:0',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after:start_date',
+            'promotion_type' => 'required|string',
+            'minimum_order_value' => 'nullable|numeric|min:0',
+            'applicable_products' => 'nullable|string', // Assuming you store product/category IDs as a string
+            'min_quantity' => 'nullable|integer|min:1',
+            'free_shipping' => 'nullable|boolean',
+            'is_member_only' => 'nullable|boolean',
+        ]);
+
+        $promotion = Promotion::create($data);
+
         return response()->json(['promotion' => $promotion], 201);
     }
 
@@ -54,7 +70,23 @@ class PromotionController extends Controller
         $promotion = Promotion::find($id);
 
         if ($promotion) {
-            $promotion->update($request->all());
+            $data = $request->validate([
+                'code' => 'required|string|max:255|unique:promotions,code,' . $promotion->id,
+                'description' => 'required|string',
+                'discount_percentage' => 'nullable|numeric|min:0|max:100',
+                'discount_amount' => 'nullable|numeric|min:0',
+                'start_date' => 'required|date',
+                'end_date' => 'required|date|after:start_date',
+                'promotion_type' => 'required|string',
+                'minimum_order_value' => 'nullable|numeric|min:0',
+                'applicable_products' => 'nullable|string',
+                'min_quantity' => 'nullable|integer|min:1',
+                'free_shipping' => 'nullable|boolean',
+                'is_member_only' => 'nullable|boolean',
+            ]);
+
+            $promotion->update($data);
+
             return response()->json(['promotion' => $promotion, 'message' => 'Promotion updated successfully']);
         }
 
@@ -74,4 +106,3 @@ class PromotionController extends Controller
         return response()->json(['message' => 'Promotion not found'], 404);
     }
 }
-
