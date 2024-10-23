@@ -80,7 +80,7 @@ Route::prefix('products')->group(function () {
     Route::get('/products_paginate', [apiProductController::class, 'products_paginate']);
     Route::get('/{id}', [apiProductController::class, 'show']);
     Route::post('/', [apiProductController::class, 'store']);
-    Route::put('/{id}', [apiProductController::class, 'update']);
+    Route::put('/products/{id}', [apiProductController::class, 'update']);
     Route::delete('/{id}', [apiProductController::class, 'delete']);
     Route::get('/search/{query}', [apiProductController::class, 'search']);
     Route::get('/{id}/related', [apiProductController::class, 'relatedProducts']);
