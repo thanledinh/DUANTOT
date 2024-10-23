@@ -72,67 +72,77 @@ class apiProductController extends Controller
 
 
     public function update(Request $request, $id)
-    {
-        try {
-            // Tìm sản phẩm dựa trên ID
-            $product = Product::findOrFail($id);
-    
-            // Validate dữ liệu
-            $validatedData = $request->validate([
-                'name' => 'sometimes|string|max:255',
-                'description' => 'sometimes|string',
-                'type' => 'sometimes|string|max:255',
-                'brand_id' => 'sometimes|integer|exists:brands,id',
-                'category_id' => 'sometimes|integer|exists:categories,id',
-                'image' => 'nullable|string',
-                'barcode' => 'nullable|string|max:255',
-                'hot' => 'nullable|boolean',  
-                'variants' => 'nullable|array',
-            ]);
-    
-            // Xử lý hình ảnh sản phẩm nếu có
-            if (isset($validatedData['image'])) {
-                $validatedData['image'] = $this->handleImageUpload($validatedData['image'], 'product');
-            }
-    
-            // Cập nhật thông tin sản phẩm
-            $product->update($validatedData);
-    
-            // Xử lý các biến thể nếu có
-            if (!empty($validatedData['variants'])) {
-                foreach ($validatedData['variants'] as $variantData) {
-                    // Kiểm tra xem biến thể đã tồn tại chưa
-                    $variant = $product->variants()->find($variantData['id'] ?? null);
-    
-                    if ($variant) {
-                        // Nếu biến thể đã tồn tại, kiểm tra và xử lý hình ảnh biến thể
-                        if (!isset($variantData['image'])) {
-                            $variantData['image'] = $variant->image;
-                        } else {
-                            // Xử lý ảnh mới cho biến thể
-                            $variantData['image'] = $this->handleImageUpload($variantData['image'], 'variant');
-                        }
-                        // Cập nhật biến thể
-                        $variant->update($variantData);
+{
+    try {
+        // Tìm sản phẩm dựa trên ID
+        $product = Product::findOrFail($id);
+
+        // Validate dữ liệu từ request
+        $validatedData = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'description' => 'sometimes|string',
+            'type' => 'sometimes|string|max:255',
+            'brand_id' => 'nullable|integer|exists:brands,id', // Allow null
+            'category_id' => 'sometimes|integer|exists:categories,id',
+            'image' => 'nullable|string',
+            'barcode' => 'nullable|string|max:255',
+            'hot' => 'nullable|boolean',
+            'variants' => 'nullable|array',
+            'variants.*.id' => 'nullable|integer|exists:product_variants,id',  // Ensure variant exists
+            'variants.*.price' => 'required_with:variants|numeric',
+            'variants.*.stock_quantity' => 'required_with:variants|integer',
+            'variants.*.size' => 'nullable|string|max:255',
+            'variants.*.flavor' => 'nullable|string|max:255',
+            'variants.*.type' => 'nullable|string|max:255',
+            'variants.*.image' => 'nullable|string',
+        ]);
+
+        // Xử lý hình ảnh sản phẩm nếu có
+        if (isset($validatedData['image'])) {
+            $validatedData['image'] = $this->handleImageUpload($validatedData['image'], 'product');
+        }
+
+        // Cập nhật thông tin sản phẩm
+        $product->update($validatedData);
+
+        // Xử lý các biến thể nếu có
+        if (!empty($validatedData['variants'])) {
+            foreach ($validatedData['variants'] as $variantData) {
+                // Tìm biến thể hiện tại (nếu có)
+                $variant = $product->variants()->find($variantData['id'] ?? null);
+
+                if ($variant) {
+                    // Nếu biến thể tồn tại, cập nhật thông tin
+                    if (!isset($variantData['image'])) {
+                        $variantData['image'] = $variant->image;
                     } else {
-                        // Tạo mới biến thể nếu chưa tồn tại
-                        if (isset($variantData['image'])) {
-                            $variantData['image'] = $this->handleImageUpload($variantData['image'], 'variant');
-                        }
-                        // Tạo biến thể mới cho sản phẩm
-                        $product->variants()->create($variantData);
+                        // Xử lý ảnh mới cho biến thể
+                        $variantData['image'] = $this->handleImageUpload($variantData['image'], 'variant');
                     }
+
+                    // Cập nhật biến thể
+                    $variant->update($variantData);
+                } else {
+                    // Nếu biến thể không tồn tại, tạo mới biến thể
+                    if (isset($variantData['image'])) {
+                        $variantData['image'] = $this->handleImageUpload($variantData['image'], 'variant');
+                    }
+
+                    // Tạo biến thể mới cho sản phẩm
+                    $product->variants()->create($variantData);
                 }
             }
-    
-            // Trả về phản hồi với thông tin sản phẩm đã cập nhật, bao gồm cả các biến thể
-            return response()->json($product->load('variants'), 200);
-            
-        } catch (\Exception $e) {
-            // Bắt lỗi và trả về thông báo lỗi
-            return response()->json(['error' => $e->getMessage()], 500);
         }
+
+        // Trả về phản hồi với thông tin sản phẩm đã cập nhật, bao gồm cả các biến thể
+        return response()->json($product->load('variants'), 200);
+        
+    } catch (\Exception $e) {
+        // Bắt lỗi và trả về thông báo lỗi chi tiết
+        return response()->json(['error' => $e->getMessage()], 500);
     }
+}
+
     
     
 
