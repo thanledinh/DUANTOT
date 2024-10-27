@@ -18,10 +18,14 @@ class UserController extends Controller
     {
         $user = User::find($id);
         if (!$user) {
-            return response()->json(['message' => 'fail'], 404);
+            return response()->json(['message' => 'User not found'], 404);
+        }
+        if ($user->is_locked) {
+            return response()->json(['message' => 'Tài khoản đã bị khoá '], 403);
         }
         return response()->json($user, 200);
-    }
+    }   
+    
     public function update(Request $request, $id)
     {
         $user = User::find($id);
@@ -54,5 +58,25 @@ class UserController extends Controller
         }
         $user->delete();
         return response()->json(['message' => 'Xoá người dùng thành công'], 200);
+    }
+    public function lockUser($id)
+    {
+        $user = User::find($id);
+        if (!$user) {
+            return response()->json(['message' => 'người dùng không tồn tại'], 404);
+        }
+        $user->is_locked = true;
+        $user->save();
+        return response()->json(['message' => 'khoá tài khoản thành công'], 200);
+    }
+    public function unlockUser($id)
+    {
+        $user = User::find($id);
+        if (!$user) {
+            return response()->json(['message' => 'user không tồn tại'], 404);
+        }
+        $user->is_locked = false;
+        $user->save();
+        return response()->json(['message' => 'Mở khoá user thành công'], 200);
     }
 }
