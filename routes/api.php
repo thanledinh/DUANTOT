@@ -23,6 +23,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\VNPayController;
 use App\Http\Controllers\ai\BoxChatAIController;
 use App\Http\Controllers\Admin\StatisticsController;
+use App\Http\Controllers\UserController;
 
 // Auth Routes
 Route::group([
@@ -204,3 +205,10 @@ Route::get('/statistics/total-products', [StatisticsController::class, 'getTotal
 
 Route::get('/statistics/orders-by-status', [StatisticsController::class, 'getOrdersByStatus']);
 
+
+Route::get('/users', [UserController::class, 'index']);  
+Route::get('/users/{id}', [UserController::class, 'show']); 
+Route::put('/users/{id}', [UserController::class, 'update']);
+Route::delete('/users/{id}', [UserController::class, 'destroy']); 
+Route::put('/users/{id}/lock', [UserController::class, 'lockUser']);
+Route::put('/users/{id}/unlock', [UserController::class, 'unlockUser']);
