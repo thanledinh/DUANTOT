@@ -329,13 +329,13 @@ class apiProductController extends Controller
 
         $bestSellingProducts = Product::with('variants')->withCount('orderItems') // Đếm số lượng đơn hàng cho mỗi sản phẩm
             ->orderBy('order_items_count', 'desc') // Sắp xếp theo số lượng đơn hàng
-            ->take(10)
+            ->take(20)
             ->get();
 
         return response()->json($bestSellingProducts);
     }
 
-    // hiển thị sản phẩm theo danh mục
+    // hiển th�� sản phẩm theo danh m���c
     public function getProductsByCategoryUrl($categoryUrl, Request $request) // Added Request $request parameter
     {
         // Tìm category dựa trên URL
@@ -395,4 +395,26 @@ class apiProductController extends Controller
         return response()->json($products);
     }
 
+    // sản phẩm liên quan
+    public function getRelatedProducts($id)
+    {
+        // Lấy sản phẩm hiện tại
+        $product = Product::findOrFail($id);
+
+        // Lấy các sản phẩm liên quan dựa trên danh mục và sắp xếp ngẫu nhiên, bao gồm cả biến thể
+        $relatedProducts = Product::with('variants') // Tải trước biến thể
+            ->where('category_id', $product->category_id)
+            ->where('id', '!=', $product->id) // Loại bỏ sản phẩm hiện tại
+            ->inRandomOrder() // Sắp xếp ngẫu nhiên
+            ->take(6) // Giới hạn số lượng sản phẩm liên quan
+            ->get()
+            ->makeHidden(['description']); // Ẩn trường description
+
+        return response()->json($relatedProducts);
+    }
+
 }
+
+
+
+

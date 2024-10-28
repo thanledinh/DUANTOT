@@ -121,7 +121,7 @@ class OrderController extends Controller
         }
         $order = Order::where('user_id', $user->id)->find($id);
         if (!$order) {
-            return response()->json(['message' => 'Đơn hàng không tồn tại hoặc không thuộc về người d��ng.'], 404);
+            return response()->json(['message' => 'Đơn hàng không tồn tại hoặc không thuộc về người dng.'], 404);
         }
         if ($order->status == 'processed' || $order->status == 'completed') {
             return response()->json(['message' => 'Không thể thay đổi trạng thái của đơn hàng đã được xử lý hoặc hoàn thành.'], 403);
@@ -184,11 +184,18 @@ class OrderController extends Controller
             'order' => $order
         ], 200);
     }
-    public function showPendingOrder()
+    public function showPendingOrder(Request $request)
     {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Bạn cần phải đăng nhập để xem đơn hàng.'], 401);
+        }
+
         $orders = Order::where('status', 'pending')
+            ->where('user_id', $user->id) // Lọc theo user_id
             ->with(['items.product', 'items.variant'])
             ->get();
+
         return response()->json([
             'message' => 'Đơn hàng đã được lấy thành công.',
             'orders' => $orders

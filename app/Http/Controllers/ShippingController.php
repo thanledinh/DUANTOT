@@ -31,14 +31,15 @@ class ShippingController extends Controller
             if ($shippingExists) {
                 return response()->json(['message' => 'Thông tin vận chuyển đã tồn tại cho đơn hàng này.'], 400);
             }
-            $shipping_cost = 40000;
+            $shipping_cost = 0;
             if ($order->id_promotion) {
                 $promotion = Promotion::find($order->id_promotion);
                 if ($promotion && $promotion->free_shipping) {
                     $shipping_cost = 0;
                 }
             }
-            if ($shipping_cost > 0) {
+            // {{ edit_1 }} - Kiểm tra nếu phí vận chuyển chưa được cộng
+            if (!$order->shipping()->exists() && $shipping_cost > 0) {
                 $order->total_price += $shipping_cost;
             }
             $order->save();

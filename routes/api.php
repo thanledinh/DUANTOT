@@ -88,7 +88,8 @@ Route::prefix('products')->group(function () {
     Route::get('/category/url/{categoryUrl}', [apiProductController::class, 'getProductsByCategoryUrl']);
 
     Route::get('/brand/{brandName}', [apiProductController::class, 'getProductsByBrand']);
-
+    
+    Route::get('/{id}/related', [apiProductController::class, 'getRelatedProducts']);
 });
 
 // Variant Routes

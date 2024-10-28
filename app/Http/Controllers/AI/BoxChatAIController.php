@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Product; // Đảm bảo bạn đã import model Product
 use Illuminate\Support\Facades\Cache; // Để sử dụng caching
+use Illuminate\Support\Collects;
+use Illuminate\Support\Facades\Log;
 
 class BoxChatAIController extends Controller
 {
@@ -14,17 +16,28 @@ class BoxChatAIController extends Controller
         $keywordsString = $request->query('keyword'); // Nhận chuỗi từ khóa từ query string
         $keywords = explode(',', $keywordsString); // Chia chuỗi thành mảng từ khóa
 
-        $cacheKey = 'products_search_' . md5($keywordsString); // Tạo khóa cache dựa trên chuỗi từ khóa
+        $products = collect(); // Tạo một collection để lưu trữ sản phẩm
 
-        // Kiểm tra cache trước
-        $products = Cache::remember($cacheKey, 60, function() use ($keywords) {
-            // Tìm kiếm sản phẩm dựa trên các từ khóa
-            return Product::where(function($query) use ($keywords) {
-                foreach ($keywords as $keyword) {
-                    $query->orWhere('name', 'LIKE', '%' . trim($keyword) . '%'); // Trim để loại bỏ khoảng trắng
-                }
-            })->take(5)->get(['id', 'name', 'image']); // Chỉ lấy 5 sản phẩm và các trường id, name, image
-        });
+        foreach ($keywords as $keyword) {
+            $keyword = trim($keyword); // Loại bỏ khoảng trắng
+            $cacheKey = 'products_search_' . md5($keyword); // Tạo khóa cache cho từng từ khóa
+
+            // Thêm thông tin gỡ lỗi
+            Log::info("Searching for keyword: $keyword");
+
+            // Kiểm tra cache trước
+            $foundProducts = Cache::remember($cacheKey, 60, function() use ($keyword) {
+                // Tìm kiếm sản phẩm dựa trên từ khóa
+                return Product::where('name', 'LIKE', '%' . $keyword . '%')
+                              ->take(5) // Lấy tối đa 2 sản phẩm cho mỗi từ khóa
+                              ->get(['id', 'name', 'image']);
+            });
+
+            // Log kết quả tìm kiếm
+            Log::info("Found products: " . $foundProducts->toJson());
+
+            $products = $products->merge($foundProducts); // Gộp sản phẩm tìm được vào collection
+        }
 
         // Kiểm tra nếu không tìm thấy sản phẩm
         if ($products->isEmpty()) {
@@ -33,4 +46,5 @@ class BoxChatAIController extends Controller
 
         return response()->json($products);
     }
+
 }
