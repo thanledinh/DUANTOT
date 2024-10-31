@@ -72,7 +72,7 @@ class apiProductController extends Controller
 
 
     public function update(Request $request, $id)
-{
+    {
     try {
         // Tìm sản phẩm dựa trên ID
         $product = Product::findOrFail($id);
@@ -273,7 +273,6 @@ class apiProductController extends Controller
                 ->select('id', 'name', 'hot', 'image')
                 ->where('hot', 1)
                 ->orderBy('created_at', 'desc')
-                ->take(10)
                 ->get();
         });
     
