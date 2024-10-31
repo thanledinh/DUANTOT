@@ -100,12 +100,12 @@ Route::prefix('variants')->group(function () {
     Route::get('/product_id={product_id}/variant_id={id}', [apiProductVariantController::class, 'getVariantByProductIdAndVariantId']);
     Route::get('/{id}', [apiProductVariantController::class, 'show']);
     Route::middleware(['ensure_token_is_valid'])->group(function () {
-        Route::post('/', [apiProductVariantController::class, 'store']);
-        Route::put('/{id}', [apiProductVariantController::class, 'update']);
-        Route::delete('/{id}', [apiProductVariantController::class, 'delete']);
+      
     });
 });
-
+Route::post('/variants', [apiProductVariantController::class, 'store']);
+Route::put('/variants/{id}', [apiProductVariantController::class, 'update']);
+Route::delete('/variants/{id}', [apiProductVariantController::class, 'delete']);
 // Category Routes
 Route::get('/categories', [apiCategoryController::class, 'index']);
 Route::get('/categories/{id}', [apiCategoryController::class, 'show']);

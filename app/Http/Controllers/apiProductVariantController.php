@@ -12,7 +12,6 @@ class apiProductVariantController extends Controller
         $products = ProductVariant::all();
         return response()->json($products, 200);
     }
-
     public function show($id)
     {
         $variant = ProductVariant::find($id);
@@ -21,13 +20,11 @@ class apiProductVariantController extends Controller
         }
         return response()->json($variant, 200);
     }
-
     public function getProductsByProductId($product_id)
     {
         $products = ProductVariant::where('product_id', $product_id)->get();
         return response()->json($products);
     }
-
     public function store(Request $request)
     {
         $validatedData = $request->validate([
@@ -39,43 +36,42 @@ class apiProductVariantController extends Controller
             'image' => 'nullable|string',
             'sale' => 'nullable|numeric',
         ]);
-
         if (!empty($validatedData['image'])) {
             $validatedData['image'] = $this->handleImageUpload($validatedData['image']);
         }
-
         $product = ProductVariant::create($validatedData);
         return response()->json($product, 201);
     }
-
     public function update(Request $request, $id)
     {
+        $product = ProductVariant::find($id);
+        if (!$product) {
+            return response()->json(['message' => 'Variant không tồn tại'], 404);
+        }
         $validatedData = $request->validate([
-            'price' => 'required|numeric',
-            'stock_quantity' => 'required|integer',
+            'price' => 'nullable|numeric',
+            'stock_quantity' => 'nullable|integer',
             'size' => 'nullable|string|max:255',
             'flavor' => 'nullable|string|max:255',
             'image' => 'nullable|string',
             'sale' => 'nullable|numeric',
         ]);
-
-        $product = ProductVariant::findOrFail($id);
-
         if (!empty($validatedData['image'])) {
             $validatedData['image'] = $this->handleImageUpload($validatedData['image']);
         }
-
         $product->update($validatedData);
         return response()->json($product, 200);
     }
-
     public function delete($id)
     {
-        $product = ProductVariant::findOrFail($id);
-        $product->delete();
-        return response()->json(null, 204);
-    }
+        $product = ProductVariant::find($id);
 
+        if (!$product) {
+            return response()->json(['message' => 'Variant không tồn tài'], 404);
+        }
+        $product->delete();
+        return response()->json(['message' => 'Xoá Variant thành công'], 204);
+    }
     private function handleImageUpload($imageData)
     {
         list($type, $imageData) = explode(';', $imageData);
