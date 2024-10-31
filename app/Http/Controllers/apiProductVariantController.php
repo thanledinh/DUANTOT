@@ -82,7 +82,7 @@ class apiProductVariantController extends Controller
         list(, $imageData) = explode(',', $imageData);
         $imageData = base64_decode($imageData);
         $imageName = time() . '.jpg';
-        file_put_contents(public_path('images/products/') . $imageName, $imageData);
-        return 'images/products/' . $imageName;
+        file_put_contents(public_path('images/variants/') . $imageName, $imageData);
+        return 'images/variants/' . $imageName;
     }
 }

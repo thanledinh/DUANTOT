@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'custom_throttle' => CustomThrottle::class,
             'orders' => \App\Http\Middleware\OrdersMiddleware::class,
+            'ensure_token_is_valid' => \App\Http\Middleware\EnsureTokenIsValid::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

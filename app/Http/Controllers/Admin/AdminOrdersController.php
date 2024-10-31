@@ -11,7 +11,9 @@ class AdminOrdersController extends Controller
     // show tất cả đơn hàng của tất cả người dùng, bao gồm thông tin shipping và payment
     public function index()
     {
-        $orders = Order::with(['items.product', 'items.variant', 'shipping', 'payment']) // Include shipping and payment information
+        $orders = Order::with(['items.product', 'items.variant', 'shipping', 'payment'])
+            ->where('status', '!=', 'pending') // Loại bỏ các đơn hàng có trạng thái pending
+            ->orderBy('created_at', 'desc') // Sắp xếp theo ngày tạo giảm dần
             ->get();
 
         return response()->json([

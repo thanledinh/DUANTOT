@@ -64,15 +64,7 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(Wishlist::class);
     }
 
-    /**
-     * Quan hệ với các sản phẩm đã yêu thích
-     */
 
-
-     public function is_admin()
-     {
-         return $this->user_type === 'admin'; // Giả sử 'admin' là giá trị xác định quyền admin
-     }
 
 
      public function notifications()
@@ -81,5 +73,15 @@ class User extends Authenticatable implements JWTSubject
                      ->withPivot('status')
                      ->withTimestamps();
      }
-   
+
+    /**
+     * Kiểm tra xem người dùng có phải là admin không.
+     *
+     * @return bool
+     */
+    public function isAdmin(): bool
+    {
+        // Sử dụng cột 'user_type' để xác định vai trò admin
+        return $this->user_type === 'admin';
+    }
 }

@@ -105,4 +105,18 @@ class PromotionController extends Controller
 
         return response()->json(['message' => 'Promotion not found'], 404);
     }
+
+    // lấy thông tin mã khuyến mãi theo tên mã khuyến mãi
+    public function getPromotionByCode($code)
+    {
+        $promotion = Promotion::where('code', $code)->first();
+        return response()->json(['promotion' => $promotion]);
+    }
+
+    // lấy thông tin mã khuyến mãi theo id
+    public function getPromotionById($id)
+    {
+        $promotion = Promotion::find($id);
+        return response()->json(['promotion' => $promotion]);
+    }
 }

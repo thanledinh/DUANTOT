@@ -6,11 +6,50 @@ use App\Models\FlashSale;
 use App\Models\FlashSaleProduct;
 use Illuminate\Http\Request;
 use App\Models\Product;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class FlashSaleController extends Controller
 {
 
+    //kiểm tra flash sale có hết hạn và gỡ sale khỏi sản phẩm
+    public function checkAndRemoveExpiredSales()
+    {
+        $now = Carbon::now();
+        Log::info("Current time: " . $now);
 
+        // Tìm các Flash Sale đã hết hạn
+        $expiredSales = FlashSale::where('end_time', '<=', $now)->get();
+        Log::info("Found expired sales count: " . $expiredSales->count());
+
+        if ($expiredSales->isEmpty()) {
+            Log::info("No expired flash sales found.");
+            return response()->json(['message' => 'No expired flash sales to process.']);
+        }
+
+        foreach ($expiredSales as $sale) {
+            Log::info("Processing sale ID: " . $sale->id);
+
+            // Cập nhật trường sale cho tất cả sản phẩm liên quan
+            $flashSaleProducts = FlashSaleProduct::where('flash_sale_id', $sale->id)->get();
+            Log::info("Found products for sale ID {$sale->id}: " . $flashSaleProducts->count());
+
+            foreach ($flashSaleProducts as $flashSaleProduct) {
+                $product = Product::find($flashSaleProduct->product_id);
+                if ($product) {
+                    Log::info("Removing sale from product ID: " . $product->id);
+                    $product->update(['sale' => 0]);
+                } else {
+                    Log::warning("Product not found for ID: " . $flashSaleProduct->product_id);
+                }
+            }
+
+            // Bạn có thể cập nhật trạng thái của Flash Sale nếu cần
+            // $sale->update(['status' => 1]);
+        }
+
+        return response()->json(['message' => 'Expired flash sales processed successfully.']);
+    }
 
     // show tất cả flash sale
     public function index()
@@ -119,7 +158,7 @@ class FlashSaleController extends Controller
                 $product = Product::find($flashSaleProduct->product_id);
                 if ($product) {
                     $product->update([
-                        'sale' => 0, // Cập nhật phần trăm giảm giá
+                        'sale' => 0, // Cập nhật phn trăm giảm giá
                     ]);
                 }
             }

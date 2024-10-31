@@ -17,10 +17,6 @@ class apiNotificationController extends Controller
 
     public function showAllNotifications()
     {
-        // Kiểm tra xem người dùng có phải là admin không
-        if (!Auth::user()->is_admin()) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
 
         // Lấy tất cả thông báo
         $notifications = Notification::all();
@@ -109,13 +105,9 @@ class apiNotificationController extends Controller
         // Tìm thông báo
         $notification = Notification::findOrFail($id);
 
-        // Kiểm tra xem người dùng có phải là admin không
-        if (Auth::user()->is_admin()) {
-            // Admin có thể xóa bất kỳ thông báo nào
             $notification->delete();
             return response()->json(['message' => 'Thông báo đã được xóa thành công.'], 200);
-        }
-
+     
         // Người dùng chỉ có thể xóa thông báo của chính họ
         $userNotification = UserNotification::where('notification_id', $id)
             ->where('user_id', Auth::id())

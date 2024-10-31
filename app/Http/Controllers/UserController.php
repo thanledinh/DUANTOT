@@ -59,24 +59,36 @@ class UserController extends Controller
         $user->delete();
         return response()->json(['message' => 'Xoá người dùng thành công'], 200);
     }
-    public function lockUser($id)
+    public function lockUsers($id)
     {
-        $user = User::find($id);
-        if (!$user) {
-            return response()->json(['message' => 'người dùng không tồn tại'], 404);
+        $userIds = explode(',', $id);
+        $users = User::whereIn('id', $userIds)->get();
+
+        if ($users->isEmpty()) {
+            return response()->json(['message' => 'Không tìm thấy người dùng nào'], 404);
         }
-        $user->is_locked = true;
-        $user->save();
-        return response()->json(['message' => 'khoá tài khoản thành công'], 200);
+
+        foreach ($users as $user) {
+            $user->is_locked = true;
+            $user->save();
+        }
+
+        return response()->json(['message' => 'Khoá tài khoản thành công'], 200);
     }
-    public function unlockUser($id)
+    public function unlockUsers($id)
     {
-        $user = User::find($id);
-        if (!$user) {
-            return response()->json(['message' => 'user không tồn tại'], 404);
+        $userIds = explode(',', $id);
+        $users = User::whereIn('id', $userIds)->get();
+
+        if ($users->isEmpty()) {
+            return response()->json(['message' => 'Không tìm thấy người dùng nào'], 404);
         }
-        $user->is_locked = false;
-        $user->save();
-        return response()->json(['message' => 'Mở khoá user thành công'], 200);
+
+        foreach ($users as $user) {
+            $user->is_locked = false;
+            $user->save();
+        }
+
+        return response()->json(['message' => 'Mở khoá tài khoản thành công'], 200);
     }
 }

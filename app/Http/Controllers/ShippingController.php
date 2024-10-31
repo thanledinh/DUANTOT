@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\Promotion;
 use App\Models\Shipping;
+use App\Models\ProductVariant;
+use App\Models\FlashSaleProduct;
 
 use Illuminate\Http\Request;
 
@@ -38,7 +40,6 @@ class ShippingController extends Controller
                     $shipping_cost = 0;
                 }
             }
-            // {{ edit_1 }} - Kiểm tra nếu phí vận chuyển chưa được cộng
             if (!$order->shipping()->exists() && $shipping_cost > 0) {
                 $order->total_price += $shipping_cost;
             }
@@ -57,12 +58,30 @@ class ShippingController extends Controller
             $shipping->shipping_status = 'pending';
             $shipping->save();
 
+            // Trừ số lượng tồn kho cho từng biến thể sản phẩm
+            foreach ($order->items as $item) {
+                $variant = ProductVariant::find($item->variant_id);
+                if ($variant) {
+                    // Trừ số lượng tồn kho trong ProductVariant
+                    $variant->stock_quantity -= $item->quantity;
+                    $variant->save();
+                }
+
+                // Kiểm tra và trừ số lượng tồn kho trong FlashSaleProduct
+                $flashSaleProduct = FlashSaleProduct::where('product_id', $item->product_id)->first();
+                if ($flashSaleProduct) {
+                    // Trừ 1 nếu số lượng tồn kho lớn hơn 0
+                    if ($flashSaleProduct->stock_quantity > 0) {
+                        $flashSaleProduct->stock_quantity -= 1;
+                        $flashSaleProduct->save();
+                    }
+                }
+            }
+
             // Cập nhật trạng thái đơn hàng
             $order->update([
                 'status' => 'Tiếp nhận', // Set status to paid
             ]);
-
-
 
             return response()->json([
                 'message' => 'Thông tin vận chuyển đã được thêm thành công.',

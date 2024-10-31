@@ -8,6 +8,7 @@ use App\Models\OrderItem;
 use App\Models\Promotion;
 use Illuminate\Http\Request;
 use App\Models\ProductVariant;
+use App\Models\Product;
 
 class OrderController extends Controller
 {
@@ -37,19 +38,52 @@ class OrderController extends Controller
         $request->validate([
             'id_promotion' => 'nullable|integer|exists:promotions,id',
             'payment_method' => 'required|string|in:cash,vnpay',
-            'sale' => 'nullable|numeric',
             'note' => 'nullable|string',
             'items' => 'required|array',
             'items.*.product_id' => 'required|integer|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.price' => 'required|numeric|min:0',
             'items.*.variant_id' => 'required|integer|min:1',
+            'items.*.sale' => 'nullable|numeric',
         ]);
 
         try {
             $total_price = 0;
             foreach ($request->items as $item) {
-                $total_price += $item['price'] * $item['quantity'];
+                $product = Product::find($item['product_id']);
+                $variant = ProductVariant::find($item['variant_id']);
+
+                // Kiểm tra số lượng tồn kho
+                if ($variant->stock_quantity < $item['quantity']) {
+                    return response()->json([
+                        'message' => 'Sản phẩm ' . $product->name . ' chỉ còn ' . $variant->stock_quantity . ' sản phẩm trong kho.',
+                        'id_product' => $product->id,
+                        'error_code' => 'INSUFFICIENT_STOCK',
+                        'available_stock' => $variant->stock_quantity
+                    ], 400);
+                }
+
+                if ($product && $this->isSaleValid($product, $item['sale'])) {
+                    $discounted_price = $item['price'] - ($item['price'] * $item['sale'] / 100);
+                    
+                    // Tính tổng giá cho sản phẩm với logic mới
+                    if ($item['quantity'] > 1) {
+                        // Áp dụng giảm giá cho 1 sản phẩm, các sản phẩm còn lại tính giá gốc
+                        $total_price += $discounted_price + ($item['price'] * ($item['quantity'] - 1));
+                    } else {
+                        // Áp dụng giảm giá cho sản phẩm
+                        $total_price += $discounted_price * $item['quantity'];
+                    }
+                } else {
+                    return response()->json([
+                        'message' => 'Giá trị sale không hợp lệ cho sản phẩm ' . $product->name,
+                        'id_product' => $product->id,
+                        'error_code' => 'INVALID_SALE_VALUE',
+                        'product_db_sale' => $product->sale,
+                        'provided_sale' => $item['sale'],
+                        'is_numeric_sale' => is_numeric($item['sale'])
+                    ], 400);
+                }
             }
             $order = new Order();
             if (auth()->guard('api')->check()) {
@@ -59,11 +93,12 @@ class OrderController extends Controller
             }
             $order->tracking_code = strtoupper(Str::random(10));
             $order->id_promotion = $request->id_promotion ?? null;
+            
             $order->order_date = now();
             $order->total_price = $total_price;
             $order->status = 'pending';
             $order->payment_method = $request->payment_method;
-            $order->sale = $request->sale ?? 0;
+
             $order->note = $request->note ?? null;
             $shipping_cost = 40000;
             if ($request->id_promotion) {
@@ -86,18 +121,26 @@ class OrderController extends Controller
             $order->total_price += $shipping_cost;
             $order->save();
             foreach ($request->items as $item) {
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_id' => $item['product_id'],
-                    'quantity' => $item['quantity'],
-                    'variant_id' => $item['variant_id'],
-                    'price' => $item['price'],
-                ]);
-                // Reduce stock quantity in product_variants
-                $variant = ProductVariant::find($item['variant_id']); // Get the product variant
-                if ($variant) {
-                    $variant->stock_quantity -= $item['quantity']; // Adjust stock quantity
-                    $variant->save(); // Save the updated variant
+                $product = Product::find($item['product_id']);
+                if ($product && $this->isSaleValid($product, $item['sale'])) {
+                    $discounted_price = $item['price'] - ($item['price'] * $item['sale'] / 100);
+                    OrderItem::create([
+                        'order_id' => $order->id,
+                        'product_id' => $item['product_id'],
+                        'quantity' => $item['quantity'],
+                        'variant_id' => $item['variant_id'],
+                        'price' => $discounted_price,
+                        'sale' => $item['sale'] ?? 0,
+                    ]); 
+                } else {
+                    return response()->json([
+                        'message' => 'Giá trị sale không hợp lệ cho sản phẩm ' . $product->name,
+                        'id_product' => $product->id,
+                        'error_code' => 'INVALID_SALE_VALUE',
+                        'product_db_sale' => $product->sale,
+                        'provided_sale' => $item['sale'],
+                        'is_numeric_sale' => is_numeric($item['sale'])
+                    ], 400);
                 }
             }
             return response()->json([
@@ -111,6 +154,12 @@ class OrderController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    private function isSaleValid($product, $sale)
+    {
+        // Kiểm tra nếu sale gửi lên giống với sale trong DB
+        return is_numeric($sale) && $sale == $product->sale;
     }
 
     public function update(Request $request, $id)
@@ -215,15 +264,6 @@ class OrderController extends Controller
             return response()->json(['message' => 'Chỉ có thể xóa đơn hàng có trạng thái pending.'], 403);
         }
 
-        // {{ edit_1 }} - Hoàn lại stock quantity cho từng item trong đơn hàng
-        foreach ($order->items as $item) {
-            $variant = ProductVariant::find($item->variant_id); // Get the product variant
-            if ($variant) {
-                $variant->stock_quantity += $item->quantity; // Restore stock quantity
-                $variant->save(); // Save the updated variant
-            }
-        }
-
         $order->delete();
         return response()->json(['message' => 'Đơn hàng đã được xóa thành công.'], 200);
     }
@@ -291,7 +331,7 @@ class OrderController extends Controller
         }
 
         return response()->json([
-            'message' => 'Danh sách đơn hàng có thông tin shipping.',
+            'message' => 'Danh sách ơn hàng có thông tin shipping.',
             'orders' => $ordersWithShipping
         ], 200);
     }
