@@ -31,10 +31,11 @@ class apiProductVariantController extends Controller
             'product_id' => 'required|integer',
             'price' => 'required|numeric',
             'stock_quantity' => 'required|integer',
+            'type' => 'nullable|string|max:255',
             'size' => 'nullable|string|max:255',
             'flavor' => 'nullable|string|max:255',
             'image' => 'nullable|string',
-            'sale' => 'nullable|numeric',
+            'sale' => 'nullable|boolean',
         ]);
         if (!empty($validatedData['image'])) {
             $validatedData['image'] = $this->handleImageUpload($validatedData['image']);
@@ -44,24 +45,36 @@ class apiProductVariantController extends Controller
     }
     public function update(Request $request, $id)
     {
-        $product = ProductVariant::find($id);
-        if (!$product) {
+       
+        $productVariant = ProductVariant::find($id);
+        if (!$productVariant) {
             return response()->json(['message' => 'Variant không tồn tại'], 404);
         }
+    
+     
         $validatedData = $request->validate([
+            'product_id' => 'nullable|exists:products,id',
             'price' => 'nullable|numeric',
-            'stock_quantity' => 'nullable|integer',
+            'image' => 'nullable|string',
+            'type' => 'nullable|string|max:255',
             'size' => 'nullable|string|max:255',
             'flavor' => 'nullable|string|max:255',
-            'image' => 'nullable|string',
-            'sale' => 'nullable|numeric',
+            'stock_quantity' => 'nullable|integer',
+            'sale' => 'nullable|boolean',
         ]);
+    
+     
         if (!empty($validatedData['image'])) {
             $validatedData['image'] = $this->handleImageUpload($validatedData['image']);
         }
-        $product->update($validatedData);
-        return response()->json($product, 200);
+    
+      
+        $productVariant->update($validatedData);
+    
+     
+        return response()->json($productVariant, 200);
     }
+    
     public function delete($id)
     {
         $product = ProductVariant::find($id);
