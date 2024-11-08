@@ -328,7 +328,7 @@ class apiProductController extends Controller
 
         $bestSellingProducts = Product::with('variants')->withCount('orderItems') // Đếm số lượng đơn hàng cho mỗi sản phẩm
             ->orderBy('order_items_count', 'desc') // Sắp xếp theo số lượng đơn hàng
-            ->take(20)
+            ->take(12)
             ->get();
 
         return response()->json($bestSellingProducts);

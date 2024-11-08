@@ -11,7 +11,7 @@ class UserController extends Controller
 {
     public function index()
     {
-        $users = User::all();
+        $users = User::where('user_type', 'user')->get();
         return response()->json($users, 200);
     }
     public function show($id)
@@ -91,4 +91,13 @@ class UserController extends Controller
 
         return response()->json(['message' => 'Mở khoá tài khoản thành công'], 200);
     }
+
+    // quản lý admin
+    public function manageAdmins()
+    {
+        $admins = User::where('user_type', 'admin')->get();
+        return response()->json($admins, 200);
+    }
+    
+
 }
