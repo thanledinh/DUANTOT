@@ -10,6 +10,7 @@ class apiProductVariantController extends Controller
     public function index()
     {
         $products = ProductVariant::all();
+        $products->makeHidden(['cost_price']);
         return response()->json($products, 200);
     }
     public function show($id)
@@ -18,18 +19,34 @@ class apiProductVariantController extends Controller
         if (!$variant) {
             return response()->json(['message' => 'Variant not found'], 404);
         }
+        $variant->makeHidden(['cost_price']);
         return response()->json($variant, 200);
     }
     public function getProductsByProductId($product_id)
     {
         $products = ProductVariant::where('product_id', $product_id)->get();
+        $products->makeHidden(['cost_price']);
         return response()->json($products);
     }
+
+
+    public function getVariantByProductIdAndVariantId($product_id, $id)
+{
+    $variant = ProductVariant::where('product_id', $product_id)->where('id', $id)->first();
+
+    if (!$variant) {
+        return response()->json(['message' => 'Variant not found'], 404);
+    }
+
+    $variant->makeHidden(['cost_price']);
+    return response()->json($variant, 200);
+}
     public function store(Request $request)
     {
         $validatedData = $request->validate([
             'product_id' => 'required|integer',
             'price' => 'required|numeric',
+            'cost_price' => 'required|numeric',
             'stock_quantity' => 'required|integer',
             'type' => 'nullable|string|max:255',
             'size' => 'nullable|string|max:255',
@@ -55,6 +72,7 @@ class apiProductVariantController extends Controller
         $validatedData = $request->validate([
             'product_id' => 'nullable|exists:products,id',
             'price' => 'nullable|numeric',
+            'cost_price' => 'required|numeric',
             'image' => 'nullable|string',
             'type' => 'nullable|string|max:255',
             'size' => 'nullable|string|max:255',
