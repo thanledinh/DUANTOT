@@ -228,6 +228,7 @@ Route::middleware(['ensure_token_is_valid'])->group(function () {
     Route::get('/statistics/total-orders', [StatisticsController::class, 'getTotalOrders']);
     Route::get('/statistics/total-products', [StatisticsController::class, 'getTotalProducts']);
     Route::get('/statistics/orders-by-status', [StatisticsController::class, 'getOrdersByStatus']);
+    Route::get('/statistics/voucher-usage', [StatisticsController::class, 'getVoucherUsage']);
 });
 
 // User Routes
@@ -239,4 +240,8 @@ Route::middleware(['ensure_token_is_valid'])->group(function () {
     Route::delete('/users/{id}', [UserController::class, 'destroy']);
     Route::put('/users/{id}/lock', [UserController::class, 'lockUsers']);
     Route::put('/users/{id}/unlock', [UserController::class, 'unlockUsers']);
+
+    // quản lý admin
+    Route::get('/admins', [UserController::class, 'manageAdmins']);
+    Route::put('/admins/{id}/lock', [UserController::class, 'lockAdmins']);
 });

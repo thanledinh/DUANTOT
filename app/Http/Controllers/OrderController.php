@@ -224,15 +224,30 @@ class OrderController extends Controller
     }
     public function showOrder($id)
     {
-        $order = Order::with('items.product', 'items.variant')->find($id);
+        $order = Order::with(['items.product', 'items.variant', 'shipping'])->find($id);
         if (!$order) {
             return response()->json(['message' => 'Đơn hàng không tồn tại.'], 404);
         }
+
+        // {{ edit_1 }} Định dạng số điện thoại
+        if ($order->shipping) {
+            $order->shipping->phone = $this->formatPhoneNumber($order->shipping->phone);
+        }
+        // {{ edit_1 }}
+
         return response()->json([
             'message' => 'Đơn hàng đã được lấy thành công.',
             'order' => $order
         ], 200);
     }
+
+    // {{ edit_2 }} Hàm định dạng số điện thoại
+    private function formatPhoneNumber($phone)
+    {
+        return substr($phone, 0, 3) . '*****' . substr($phone, -2);
+    }
+
+
     public function showPendingOrder(Request $request)
     {
         $user = $request->user();
@@ -320,18 +335,18 @@ class OrderController extends Controller
         }
 
         $orders = Order::where('user_id', $user->id)
-            ->with('items.product', 'items.variant')
+            ->with(['items.product', 'items.variant'])
             ->get();
 
         $ordersWithShipping = [];
         foreach ($orders as $order) {
             if ($order->shipping()->exists()) {
-                $ordersWithShipping[] = $order; // Add the entire order
+                $ordersWithShipping[] = $order; // Add the entire order with shipping info
             }
         }
 
         return response()->json([
-            'message' => 'Danh sách ơn hàng có thông tin shipping.',
+            'message' => 'Danh sách đơn hàng có thông tin shipping.',
             'orders' => $ordersWithShipping
         ], 200);
     }

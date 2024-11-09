@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
+use App\Mail\OtpMail;
+
 class AuthController extends BaseController
 {
     public function register(Request $request)
@@ -43,26 +45,32 @@ class AuthController extends BaseController
     }
 
     public function login(Request $request)
-{
-    $credentials = $request->only('email', 'password');
+    {
+        $credentials = $request->only('email', 'password');
 
-    if (!$token = auth('api')->attempt($credentials)) {
-        return response()->json(['message' => 'Unauthorized', 'error' => 'Unauthorized'], 401);
+        if (!$token = auth('api')->attempt($credentials)) {
+            return response()->json(['message' => 'Unauthorized', 'error' => 'Unauthorized'], 401);
+        }
+
+        $user = User::where('email', $request->email)->first();
+
+        // Kiểm tra nếu người dùng bị khóa
+        if ($user->is_locked) {
+            auth('api')->logout(); // Đảm bảo token không được cấp
+
+            return response()->json(['message' => 'Unauthorized', 'error' => 'Your account is locked. Please contact support.'], 403);
+        }
+
+        $success['token'] = $token;
+        $success['user'] = $user;
+        return response()->json(['success' => $success, 'message' => 'User login successfully'], 200);
     }
 
-    $user = User::where('email', $request->email)->first();
-
-    $success['token'] = $token;
-    $success['user'] = $user;
-    return response()->json(['success' => $success, 'message' => 'User login successfully'], 200);
-}
-
     public function logout()
-    {   
+    {
 
         $success = auth('api')->logout();
         return $this->sendResponse($success, 'User logout successfully');
-        
     }
 
     public function refresh()
@@ -130,9 +138,17 @@ class AuthController extends BaseController
         }
 
         $user = auth('api')->user();
+
+        // Kiểm tra nếu người dùng bị khóa
+        if ($user->is_locked) {
+            auth('api')->logout(); // Đảm bảo token không được cấp
+
+            return $this->sendError('Unauthorized', ['error' => 'Your account is locked. Please contact support.'], 403);
+        }
+
         if ($user->user_type !== 'admin') {
             auth('api')->logout();
-       
+
             return $this->sendError('Unauthorized', ['error' => 'You are not authorized to access this area'], 403);
         }
 
@@ -166,24 +182,14 @@ class AuthController extends BaseController
         $request->validate(['email' => 'required|email']);
 
         // Tạo mã OTP ngẫu nhiên (6 chữ số)
-        $otp = rand(100000, 999999); // Tạo mã OTP từ 100000 đến 999999
+        $otp = rand(100000, 999999);
 
-        // Tính thời gian hết hạn (ví dụ: 5 phút)
-        $expiresAt = Carbon::now()->addMinutes(5);
-
-        // Lưu mã OTP vào bảng otps
-        DB::table('otps')->insert([
-            'email' => $request->email,
-            'otp' => $otp,
-            'expires_at' => $expiresAt,
-            'created_at' => now(),
-        ]);
+        // Lưu mã OTP vào cache với thời gian hết hạn 5 phút
+        $expiresAt = now()->addMinutes(5);
+        cache()->put('otp_' . $request->email, $otp, $expiresAt);
 
         // Gửi mã OTP đến email của người dùng
-        Mail::raw("Mã OTP của bạn để đặt lại mật khẩu là: $otp", function ($message) use ($request) {
-            $message->to($request->email)
-                ->subject('Mã OTP Đặt Lại Mật Khẩu');
-        });
+        Mail::to($request->email)->send(new OtpMail($otp));
 
         return response()->json(['message' => 'Mã OTP đã được gửi đến email của bạn.']);
     }
@@ -191,23 +197,19 @@ class AuthController extends BaseController
     public function resetPassword(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'otp' => 'required|integer', // Xác thực mã OTP là số
+            'otp' => 'required|integer',
             'email' => 'required|email',
-            'password' => 'required|string|min:6|confirmed', // Xác thực mật khẩu và xác nhận
+            'password' => 'required|string|min:6|confirmed',
         ]);
 
         if ($validator->fails()) {
             return $this->sendError('Lỗi xác thực.', $validator->errors());
         }
 
-        // Kiểm tra mã OTP trong bảng otps
-        $otpRecord = DB::table('otps')
-            ->where('email', $request->email)
-            ->where('otp', $request->otp)
-            ->where('expires_at', '>', now()) // Kiểm tra xem OTP có còn hiệu lực không
-            ->first();
+        // Kiểm tra mã OTP từ cache
+        $cachedOtp = cache()->get('otp_' . $request->email);
 
-        if (!$otpRecord) {
+        if (!$cachedOtp || $cachedOtp != $request->otp) {
             return $this->sendError('Mã OTP không hợp lệ hoặc đã hết hạn.', [], 400);
         }
 
@@ -221,8 +223,8 @@ class AuthController extends BaseController
         $user->setRememberToken(Str::random(60));
         $user->save();
 
-        // Xóa mã OTP khỏi bảng otps
-        DB::table('otps')->where('id', $otpRecord->id)->delete();
+        // Xóa mã OTP khỏi cache
+        cache()->forget('otp_' . $request->email);
 
         return $this->sendResponse([], 'Mật khẩu đã được đặt lại thành công.');
     }
@@ -253,6 +255,4 @@ class AuthController extends BaseController
 
         return $this->sendResponse([], 'Mật khẩu đã được thay đổi thành công.');
     }
-
-
 }

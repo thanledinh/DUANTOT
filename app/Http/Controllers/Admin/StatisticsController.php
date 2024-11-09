@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
 class StatisticsController extends Controller
 {
@@ -118,4 +119,15 @@ class StatisticsController extends Controller
         return response()->json($orderCounts);
     }
 
+    public function getVoucherUsage()
+    {
+        // Thực hiện truy vấn để đếm số lượng voucher đã được sử dụng
+        $voucherUsage = DB::table('orders')
+            ->select('id_promotion', DB::raw('count(*) as total_used'))
+            ->whereNotNull('id_promotion') // Chỉ tính các đơn hàng có promotion_id
+            ->groupBy('id_promotion')
+            ->get();
+
+        return response()->json($voucherUsage);
+    }
 }
