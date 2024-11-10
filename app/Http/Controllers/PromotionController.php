@@ -31,21 +31,40 @@ public function create(Request $request)
 
     // Phương thức kiểm tra mã khuyến mãi và xử lý số lượng
     public function check(Request $request)
-{
-    $promotion = Promotion::where('code', $request->input('code'))
-        ->whereDate('start_date', '<=', now())
-        ->whereDate('end_date', '>=', now())
-        ->where('quantity', '>', 0) // Đảm bảo còn số lượng mã khuyến mãi
-        ->first();
-
-    if ($promotion && $promotion->isValidForOrder($request->order)) {
+    {
+        // Lấy mã khuyến mãi
+        $promotion = Promotion::where('code', $request->input('code'))
+            ->whereDate('start_date', '<=', now())
+            ->whereDate('end_date', '>=', now())
+            ->where('quantity', '>', 0) // Đảm bảo còn số lượng mã khuyến mãi
+            ->first();
+    
+        if (!$promotion) {
+            return response()->json(['valid' => false, 'message' => 'Mã khuyến mãi không khả dụng hoặc đã hết hạn'], 404);
+        }
+    
+        $userId = Auth::id(); // Lấy ID người dùng hiện tại
+    
+        // Kiểm tra xem người dùng đã sử dụng mã này chưa
+        $hasUsed = UserPromotion::where('promotion_id', $promotion->id)
+            ->where('user_id', $userId)
+            ->exists();
+    
+        if ($hasUsed) {
+            return response()->json(['valid' => false, 'message' => 'Bạn đã sử dụng mã khuyến mãi này rồi.'], 403);
+        }
+    
+        // Đánh dấu mã đã được sử dụng bởi người dùng này
+        UserPromotion::create([
+            'promotion_id' => $promotion->id,
+            'user_id' => $userId,
+        ]);
+    
         // Giảm số lượng mã khuyến mãi
         $promotion->decrement('quantity');
+    
         return response()->json(['valid' => true, 'promotion' => $promotion]);
     }
-
-    return response()->json(['valid' => false, 'message' => 'Mã khuyến mãi không khả dụng hoặc đã hết hạn'], 404);
-}
 
 // Phương thức cập nhật mã khuyến mãi, bao gồm số lượng
 public function update(Request $request, $id)
