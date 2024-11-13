@@ -194,9 +194,8 @@ Route::middleware(['ensure_token_is_valid'])->group(function () {
 
 // Shipping Routes
 Route::get('/shipping/{order_id}', [ShippingController::class, 'show']);
-Route::middleware(['ensure_token_is_valid'])->group(function () {
-    Route::post('orders/{order_id}/shipping', [ShippingController::class, 'store']);
-});
+Route::post('orders/{order_id}/shipping', [ShippingController::class, 'store']);
+
 
 // Price Route
 Route::get('product/{id}/price', [apiProductController::class, 'getProductPrice']);
