@@ -136,20 +136,12 @@ Route::middleware(['ensure_token_is_valid'])->group(function () {
     Route::delete('/notifications/{id}', [apiNotificationController::class, 'destroy']);
 });
 
-// Promotion Routes
-Route::prefix('admin')->group(function () {
-    Route::middleware(['ensure_token_is_valid'])->group(function () {
-        Route::get('/promotion', [PromotionController::class, 'index']);
-        Route::post('/promotion/create', [PromotionController::class, 'create']);
-        Route::post('/promotion/check', [PromotionController::class, 'check']);
-        Route::put('/promotion/{id}', [PromotionController::class, 'update']);
-        Route::delete('/promotion/{id}', [PromotionController::class, 'destroy']);
-    });
-});
-
-Route::get('/promotion/code/{code}', [PromotionController::class, 'getPromotionByCode']);
-Route::get('/promotion/{id}', [PromotionController::class, 'getPromotionById']);
-
+Route::post('/promotions/create', [PromotionController::class, 'create']);
+Route::get('/promotions', [PromotionController::class, 'index']);
+Route::get('/promotions/{id}', [PromotionController::class, 'show']);
+Route::put('/promotions/{id}', [PromotionController::class, 'update']);
+Route::delete('/promotions/{id}', [PromotionController::class, 'destroy']);
+Route::get('/promotions/code/{code}', [PromotionController::class, 'getPromotionByCode']);
 // Brand Routes
 Route::get('/brands', [apiBrandController::class, 'index']);
 Route::get('/brands/{id}', [apiBrandController::class, 'show']);
