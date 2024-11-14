@@ -15,15 +15,7 @@ class apiProductController extends Controller
 {
     public function index(Request $request)
     {
-        // Lấy số lượng sản phẩm trên mỗi trang từ request, mặc định là 10
-        $pageSize = $request->input('pageSize', 10);
-
-        // Lấy số trang cần lấy từ request, mặc định là 1
-        $pageNumber = $request->input('pageNumber', 1);
-
-        // Phân trang sản phẩm
-        $products = Product::with('variants')->paginate($pageSize, ['*'], 'page', $pageNumber);
-
+        $products = Product::with('variants')->get();
         return response()->json($products, 200);
     }
 
@@ -51,7 +43,7 @@ class apiProductController extends Controller
             'variants.*.flavor' => 'nullable|string|max:255',
             'variants.*.type' => 'nullable|string|max:255',
             'variants.*.image' => 'nullable|string',
-            'variants.*.cost_price' => 'required_with:variants|numeric',
+            'variants.*.sale' => 'nullable|numeric',
         ]);
 
         // Xử lý hình ảnh sản phẩm nếu có
@@ -103,7 +95,6 @@ class apiProductController extends Controller
             'variants.*.flavor' => 'nullable|string|max:255',
             'variants.*.type' => 'nullable|string|max:255',
             'variants.*.image' => 'nullable|string',
-            'variants.*.cost_price' => 'required_with:variants|numeric',
         ]);
 
         // Xử lý hình ảnh sản phẩm nếu có
@@ -396,7 +387,7 @@ class apiProductController extends Controller
         $brandIds = $brands->pluck('id');
 
         // Lấy sản phẩm theo danh sách brand_id với phân trang
-        $pageSize = $request->input('pageSize', 12); // Mặc định là 10 nếu không có tham số
+        $pageSize = $request->input('pageSize', 10); // Mặc định là 10 nếu không có tham số
         $pageNumber = $request->input('pageNumber', 1); // Mặc định là 1 nếu không có tham số
 
         $products = Product::with('variants')->whereIn('brand_id', $brandIds)->paginate($pageSize, ['*'], 'page', $pageNumber);
