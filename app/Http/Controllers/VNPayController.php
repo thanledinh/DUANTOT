@@ -88,7 +88,6 @@ class VNPayController extends Controller
         return response()->json($vnp_Url); // Trả về URL thanh toán
     }
 
-
     public function paymentReturn(Request $request)
     {
         // Lấy chuỗi bí mật từ tệp cấu hình

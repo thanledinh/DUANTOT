@@ -17,7 +17,6 @@ class ProductVariant extends Model
         'flavor',
         'type',
         'image',
-        'sale',
         'cost_price'
     ];
 

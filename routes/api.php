@@ -236,3 +236,8 @@ Route::middleware(['ensure_token_is_valid'])->group(function () {
     Route::get('/admins', [UserController::class, 'manageAdmins']);
     Route::put('/admins/{id}/lock', [UserController::class, 'lockAdmins']);
 });
+
+
+
+
+Route::get('/search-products-all', [BoxChatAIController::class, 'searchProductByAll']);
