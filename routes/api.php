@@ -36,8 +36,8 @@ Route::group([
     Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:api');
     Route::post('/refresh', [AuthController::class, 'refresh'])->middleware('auth:api');
     Route::post('/profile', [AuthController::class, 'profile'])->middleware('auth:api');
-    Route::post('/change-password', [AuthController::class, 'changePassword'])->middleware('auth:api');
-    Route::post('/updatecontactinfo', [AuthController::class, 'updateContactInfo'])->middleware('auth:api');
+    Route::put('/change-password', [AuthController::class, 'changePassword'])->middleware('auth:api');
+    Route::put('/updatecontactinfo', [AuthController::class, 'updateContactInfo'])->middleware('auth:api');
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->name('password.email');
     Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.reset');
 });
@@ -123,7 +123,7 @@ Route::get('/product-reviews', [apiProductReviewController::class, 'showProduct_
 Route::get('/admin/product-reviews', [apiProductReviewController::class, 'showProduct_reviewforAdmin']);
 Route::middleware(['ensure_token_is_valid'])->group(function () {
     Route::post('/product-reviews', [apiProductReviewController::class, 'store']);
-    Route::post('/product-reviews/{id}/hide', [apiProductReviewController::class, 'hide']);
+    Route::put('/product-reviews/{id}/hide', [apiProductReviewController::class, 'hide']);
     Route::delete('/product-reviews/{id}', [apiProductReviewController::class, 'destroy']);
 });
 
@@ -205,7 +205,7 @@ Route::get('payment/{order_id}', [PaymentController::class, 'getPaymentInfo']);
 Route::get('payment/transaction/{transaction_code}', [PaymentController::class, 'getLatestTransaction']);
 Route::middleware(['ensure_token_is_valid'])->group(function () {
     Route::post('/create-payment', [VNPayController::class, 'createPayment']);
-    Route::post('/update-payment-status', [VNPayController::class, 'updatePaymentStatus']);
+    Route::put('/update-payment-status', [VNPayController::class, 'updatePaymentStatus']);
 });
 
 // AI Routes
