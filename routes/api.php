@@ -54,6 +54,7 @@ Route::get('/user', function (Request $request) {
 
 // Admin Routes
 Route::middleware(['ensure_token_is_valid'])->group(function () {
+    Route::get('/admin/products', [AdminProductsController::class, 'getProducts']);
     Route::get('/admin/products/{productId}/variants', [AdminProductsController::class, 'getProductVariants']);
     Route::get('/admin/products/lowest-stock', [AdminProductsController::class, 'getProductsWithLowestStock']);
     Route::get('/admin/products/variants/stock-quantity', [AdminProductsController::class, 'index']);
@@ -100,7 +101,7 @@ Route::prefix('variants')->group(function () {
     Route::get('/product_id={product_id}/variant_id={id}', [apiProductVariantController::class, 'getVariantByProductIdAndVariantId']);
     Route::get('/{id}', [apiProductVariantController::class, 'show']);
     Route::middleware(['ensure_token_is_valid'])->group(function () {
-      
+        Route::get('/admin/variants', [apiProductVariantController::class, 'getVariants']);
     });
 });
 Route::post('/variants', [apiProductVariantController::class, 'store']);

@@ -13,6 +13,13 @@ class apiProductVariantController extends Controller
         $products->makeHidden(['cost_price']);
         return response()->json($products, 200);
     }
+
+    //show cost_price admin
+    public function getVariants()
+    {
+        $products = ProductVariant::all();
+        return response()->json($products, 200);
+    }
     public function show($id)
     {
         $variant = ProductVariant::find($id);
