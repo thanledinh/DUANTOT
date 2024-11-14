@@ -52,7 +52,6 @@ class apiProductVariantController extends Controller
             'size' => 'nullable|string|max:255',
             'flavor' => 'nullable|string|max:255',
             'image' => 'nullable|string',
-            'sale' => 'nullable|boolean',
         ]);
         if (!empty($validatedData['image'])) {
             $validatedData['image'] = $this->handleImageUpload($validatedData['image']);
@@ -78,7 +77,6 @@ class apiProductVariantController extends Controller
             'size' => 'nullable|string|max:255',
             'flavor' => 'nullable|string|max:255',
             'stock_quantity' => 'nullable|integer',
-            'sale' => 'nullable|boolean',
         ]);
     
      
