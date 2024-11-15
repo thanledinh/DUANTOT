@@ -15,13 +15,27 @@ class apiProductController extends Controller
 {
     public function index(Request $request)
     {
-        $products = Product::with('variants')->get();
+        $products = Product::with('variants')->get()->map(function ($product) {
+            unset($product->description);
+            $product->variants->makeHidden(['cost_price']);
+            return $product;
+        });
+        
+        return response()->json($products, 200);
+    }
+    public function showWithoutHidden(Request $request)
+    {
+        $products = Product::with('variants')->get()->map(function ($product) {
+            return $product;
+        });
+        
         return response()->json($products, 200);
     }
 
     public function show($id)
     {
         $product = Product::with('variants')->findOrFail($id);
+        $product->variants->makeHidden(['cost_price']);
         return response()->json($product, 200);
     }
 
@@ -193,11 +207,12 @@ class apiProductController extends Controller
 
     public function products_paginate(Request $request)
     {
-        $pageSize = $request->input('pageSize', 10); // Mặc định là 10 nếu không có tham số
-        $pageNumber = $request->input('pageNumber', 1); // Mặc định là 1 nếu không có tham số
-
-        // Phân trang sản phẩm
-        $products = Product::with('variants')->paginate($pageSize, ['*'], 'page', $pageNumber);
+        // Lấy tất cả sản phẩm cùng với biến thể
+        $products = Product::with('variants')->get()->map(function ($product) {
+            $product->makeHidden(['description']); // Ẩn trường description
+            $product->variants->makeHidden(['cost_price']); // Ẩn trường cost_price của biến thể
+            return $product;
+        });
 
         return response()->json($products);
     }
@@ -234,6 +249,12 @@ class apiProductController extends Controller
             });
         }
 
+        // Ẩn trường description và cost_price
+        $sortedProducts->each(function ($product) {
+            $product->makeHidden(['description']);
+            $product->variants->makeHidden(['cost_price']);
+        });
+
         return response()->json($sortedProducts->values()->all());
     }
 
@@ -244,10 +265,17 @@ class apiProductController extends Controller
         $product = Product::findOrFail($id);
 
         // Lấy các sản phẩm liên quan dựa trên danh mục
-        $relatedProducts = Product::where('category_id', $product->category_id)
+        $relatedProducts = Product::with('variants') // Tải trước biến thể
+            ->where('category_id', $product->category_id)
             ->where('id', '!=', $product->id) // Loại bỏ sản phẩm hiện tại
             ->take(6) // Giới hạn số lượng sản phẩm liên quan
             ->get();
+
+        // Ẩn trường description và cost_price
+        $relatedProducts->each(function ($product) {
+            $product->makeHidden(['description']);
+            $product->variants->makeHidden(['cost_price']);
+        });
 
         return response()->json($relatedProducts);
     }
@@ -258,9 +286,14 @@ class apiProductController extends Controller
         // Lấy 10 sản phẩm mới nhất, có thể thay đổi số lượng theo nhu cầu
         $latestProducts = Product::with('variants') // Eager load variants
             ->orderBy('created_at', 'desc') // Sắp xếp theo thời gian tạo
-            ->take(10)
+            ->take(20)
             ->get()
             ->makeHidden(['description']); // Hide the description field
+
+        // Ẩn trường cost_price cho từng biến thể của mỗi sản phẩm
+        $latestProducts->each(function ($product) {
+            $product->variants->makeHidden(['cost_price']);
+        });
 
         return response()->json($latestProducts);
     }
@@ -334,8 +367,8 @@ class apiProductController extends Controller
         return response()->json($bestSellingProducts);
     }
 
-    // hiển th�� sản phẩm theo danh m���c
-    public function getProductsByCategoryUrl($categoryUrl, Request $request) // Added Request $request parameter
+    // hiển th sản phẩm theo danh mc
+    public function getProductsByCategoryUrl($categoryUrl, Request $request)
     {
         // Tìm category dựa trên URL
         $category = Category::where('url', $categoryUrl)->firstOrFail();
@@ -343,20 +376,17 @@ class apiProductController extends Controller
         // Lấy tất cả subcategories của category với id = $category->id
         $subcategories = Category::where('parent_id', $category->id)->pluck('id');
 
-        // Lấy tất cả sản phẩm thuộc về category hoặc subcategories với phân trang
-        $pageSize = $request->input('pageSize', 10); // Mặc định là 10 nếu không có tham số
-        $pageNumber = $request->input('pageNumber', 1); // Mặc định là 1 nếu không có tham số
-
+        // Lấy tất cả sản phẩm thuộc về category hoặc subcategories
         if ($subcategories->isNotEmpty()) {
             // Nếu có subcategories, lấy sản phẩm từ subcategories
             $products = Product::with('variants')
                 ->whereIn('category_id', $subcategories)
-                ->paginate($pageSize, ['*'], 'page', $pageNumber);
+                ->get();
         } else {
             // Nếu không có subcategories, lấy sản phẩm từ category hiện tại
             $products = Product::with('variants')
                 ->where('category_id', $category->id)
-                ->paginate($pageSize, ['*'], 'page', $pageNumber);
+                ->get();
         }
 
         return response()->json($products, 200);
@@ -375,7 +405,7 @@ class apiProductController extends Controller
     }
 
     // lấy sản phẩm theo brand name
-    public function getProductsByBrand($brandNames, Request $request) // Added Request $request parameter
+    public function getProductsByBrand($brandNames, Request $request)
     {
         // Tách danh sách tên thương hiệu thành mảng
         $brandNamesArray = explode(',', $brandNames);
@@ -386,11 +416,9 @@ class apiProductController extends Controller
         // Lấy tất cả các ID của thương hiệu
         $brandIds = $brands->pluck('id');
 
-        // Lấy sản phẩm theo danh sách brand_id với phân trang
-        $pageSize = $request->input('pageSize', 10); // Mặc định là 10 nếu không có tham số
-        $pageNumber = $request->input('pageNumber', 1); // Mặc định là 1 nếu không có tham số
+        // Lấy sản phẩm theo danh sách brand_id
+        $products = Product::with('variants')->whereIn('brand_id', $brandIds)->get();
 
-        $products = Product::with('variants')->whereIn('brand_id', $brandIds)->paginate($pageSize, ['*'], 'page', $pageNumber);
         return response()->json($products);
     }
 

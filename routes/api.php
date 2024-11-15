@@ -54,6 +54,8 @@ Route::get('/user', function (Request $request) {
 
 // Admin Routes
 Route::middleware(['ensure_token_is_valid'])->group(function () {
+    Route::get('/admin/products', [apiProductController::class, 'showWithoutHidden']);
+    Route::get('/admin/variants', [apiProductVariantController::class, 'showWithoutHidden']);
     Route::get('/admin/products/{productId}/variants', [AdminProductsController::class, 'getProductVariants']);
     Route::get('/admin/products/lowest-stock', [AdminProductsController::class, 'getProductsWithLowestStock']);
     Route::get('/admin/products/variants/stock-quantity', [AdminProductsController::class, 'index']);
@@ -66,6 +68,7 @@ Route::middleware(['ensure_token_is_valid'])->group(function () {
     Route::get('/admin/products/low-stock-alerts', [AdminProductsController::class, 'getLowStockAlerts']);
     Route::get('/admin/products/stock-history/{variantId}', [AdminProductsController::class, 'getStockHistory']);
 });
+
 
 // Admin Orders Routes
 Route::middleware(['ensure_token_is_valid'])->group(function () {
@@ -99,13 +102,15 @@ Route::prefix('variants')->group(function () {
     Route::get('/product_id={product_id}', [apiProductVariantController::class, 'getProductsByProductId']);
     Route::get('/product_id={product_id}/variant_id={id}', [apiProductVariantController::class, 'getVariantByProductIdAndVariantId']);
     Route::get('/{id}', [apiProductVariantController::class, 'show']);
-    Route::middleware(['ensure_token_is_valid'])->group(function () {
-      
-    });
 });
-Route::post('/variants', [apiProductVariantController::class, 'store']);
-Route::put('/variants/{id}', [apiProductVariantController::class, 'update']);
-Route::delete('/variants/{id}', [apiProductVariantController::class, 'delete']);
+Route::middleware(['ensure_token_is_valid'])->group(function () {
+    Route::get('/admin/variants/product_id={product_id}', [apiProductVariantController::class, 'getProductsByProductIdWithoutHidden']);
+    Route::get('/admin/variants/product_id={product_id}/variant_id={id}', [apiProductVariantController::class, 'getVariantByProductIdAndVariantIdWithoutHidden']);
+    Route::post('/variants', [apiProductVariantController::class, 'store']);
+    Route::put('/variants/{id}', [apiProductVariantController::class, 'update']);
+    Route::delete('/variants/{id}', [apiProductVariantController::class, 'delete']);
+});
+
 // Category Routes
 Route::get('/categories', [apiCategoryController::class, 'index']);
 Route::get('/categories/{id}', [apiCategoryController::class, 'show']);

@@ -13,6 +13,13 @@ class apiProductVariantController extends Controller
         $products->makeHidden(['cost_price']);
         return response()->json($products, 200);
     }
+
+    public function showWithoutHidden()
+    {
+        $products = ProductVariant::all();
+        return response()->json($products, 200);
+    }
+
     public function show($id)
     {
         $variant = ProductVariant::find($id);
@@ -28,10 +35,15 @@ class apiProductVariantController extends Controller
         $products->makeHidden(['cost_price']);
         return response()->json($products);
     }
+    public function getProductsByProductIdWithoutHidden($product_id)
+    {
+        $products = ProductVariant::where('product_id', $product_id)->get();
+        return response()->json($products);
+    }
 
 
     public function getVariantByProductIdAndVariantId($product_id, $id)
-{
+    {
     $variant = ProductVariant::where('product_id', $product_id)->where('id', $id)->first();
 
     if (!$variant) {
@@ -40,7 +52,14 @@ class apiProductVariantController extends Controller
 
     $variant->makeHidden(['cost_price']);
     return response()->json($variant, 200);
-}
+    }
+
+    public function getVariantByProductIdAndVariantIdWithoutHidden($product_id, $id)
+    {
+        $variant = ProductVariant::where('product_id', $product_id)->where('id', $id)->first();
+        return response()->json($variant);
+    }
+
     public function store(Request $request)
     {
         $validatedData = $request->validate([
@@ -53,9 +72,30 @@ class apiProductVariantController extends Controller
             'flavor' => 'nullable|string|max:255',
             'image' => 'nullable|string',
         ]);
+
+        // Kiểm tra sự tồn tại của sản phẩm với cùng type, size, hoặc flavor
+        $existingProduct = ProductVariant::where('product_id', $validatedData['product_id'])
+            ->where(function($query) use ($validatedData) {
+                if (!empty($validatedData['type'])) {
+                    $query->where('type', $validatedData['type']);
+                }
+                if (!empty($validatedData['size'])) {
+                    $query->where('size', $validatedData['size']);
+                }
+                if (!empty($validatedData['flavor'])) {
+                    $query->where('flavor', $validatedData['flavor']);
+                }
+            })
+            ->first();
+
+        if ($existingProduct) {
+            return response()->json(['message' => 'Sản phẩm với type, size, hoặc flavor đã tồn tại'], 400);
+        }
+
         if (!empty($validatedData['image'])) {
             $validatedData['image'] = $this->handleImageUpload($validatedData['image']);
         }
+
         $product = ProductVariant::create($validatedData);
         return response()->json($product, 201);
     }
@@ -107,7 +147,7 @@ class apiProductVariantController extends Controller
         list(, $imageData) = explode(',', $imageData);
         $imageData = base64_decode($imageData);
         $imageName = time() . '.jpg';
-        file_put_contents(public_path('images/variants/') . $imageName, $imageData);
-        return 'images/variants/' . $imageName;
+        file_put_contents(public_path('images/variant/') . $imageName, $imageData);
+        return 'images/variant/' . $imageName;
     }
 }
