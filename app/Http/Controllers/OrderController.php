@@ -68,10 +68,8 @@ class OrderController extends Controller
                     
                     // Tính tổng giá cho sản phẩm với logic mới
                     if ($item['quantity'] > 1) {
-                        // Áp dụng giảm giá cho 1 sản phẩm, các sản phẩm còn lại tính giá gốc
                         $total_price += $discounted_price + ($item['price'] * ($item['quantity'] - 1));
                     } else {
-                        // Áp dụng giảm giá cho sản phẩm
                         $total_price += $discounted_price * $item['quantity'];
                     }
                 } else {
@@ -85,6 +83,7 @@ class OrderController extends Controller
                     ], 400);
                 }
             }
+
             $order = new Order();
             if (auth()->guard('api')->check()) {
                 $order->user_id = auth()->guard('api')->id();
@@ -101,25 +100,36 @@ class OrderController extends Controller
 
             $order->note = $request->note ?? null;
             $shipping_cost = 40000;
+
             if ($request->id_promotion) {
                 $promotion = Promotion::find($request->id_promotion);
                 if ($promotion) {
-                    if ($total_price >= $promotion->minimum_order_value) {
-                        if ($promotion->discount_percentage) {
-                            $discount = ($total_price * $promotion->discount_percentage) / 100;
-                            $order->total_price -= $discount;
-                        } elseif ($promotion->discount_amount) {
-                            $order->total_price -= $promotion->discount_amount;
+                    if ($promotion->quantity > 0) {
+                        if ($total_price >= $promotion->minimum_order_value) {
+                            if ($promotion->discount_percentage) {
+                                $discount = ($total_price * $promotion->discount_percentage) / 100;
+                                $order->total_price -= $discount;
+                            } elseif ($promotion->discount_amount) {
+                                $order->total_price -= $promotion->discount_amount;
+                            }
+                            if ($promotion->free_shipping) {
+                                $shipping_cost = 0;
+                            }
+                            $order->total_price = max(0, $order->total_price);
+                            $promotion->decrement('quantity'); // Giảm số lượng mã khuyến mãi
                         }
-                        if ($promotion->free_shipping) {
-                            $shipping_cost = 0;
-                        }
-                        $order->total_price = max(0, $order->total_price);
+                    } else {
+                        return response()->json([
+                            'message' => 'Mã khuyến mãi đã hết số lượng.',
+                            'error_code' => 'PROMOTION_OUT_OF_STOCK'
+                        ], 400);
                     }
                 }
             }
+
             $order->total_price += $shipping_cost;
             $order->save();
+
             foreach ($request->items as $item) {
                 $product = Product::find($item['product_id']);
                 if ($product && $this->isSaleValid($product, $item['sale'])) {
@@ -143,6 +153,7 @@ class OrderController extends Controller
                     ], 400);
                 }
             }
+
             return response()->json([
                 'message' => 'Đơn hàng đã được tạo thành công.',
                 'order' => $order,

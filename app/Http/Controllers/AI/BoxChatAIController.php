@@ -47,4 +47,62 @@ class BoxChatAIController extends Controller
         return response()->json($products);
     }
 
+    public function searchProductByAll(Request $request)
+    {
+        try {
+            $keyword = $request->query('keyword');
+            
+            if (empty($keyword)) {
+                return response()->json(['message' => 'Vui lòng nhập từ khóa tìm kiếm'], 400);
+            }
+
+            $cacheKey = 'products_full_search_' . md5($keyword);
+
+            $products = Cache::remember($cacheKey, 60, function() use ($keyword) {
+                $products = Product::with(['brand', 'category'])
+                    ->where(function($query) use ($keyword) {
+                        $query->where('name', 'LIKE', '%' . $keyword . '%')
+                              ->orWhereRaw('LOWER(REGEXP_REPLACE(description, "<[^>]*>", "")) LIKE ?', ['%' . strtolower($keyword) . '%'])
+                              ->orWhereHas('brand', function($q) use ($keyword) {
+                                  $q->where('name', 'LIKE', '%' . $keyword . '%');
+                              })
+                              ->orWhereHas('category', function($q) use ($keyword) {
+                                  $q->where('name', 'LIKE', '%' . $keyword . '%');
+                              });
+                    })
+                    ->take(10)
+                    ->get();
+
+                // Lọc thêm kết quả dựa trên nội dung HTML đã được strip tags
+                return $products->filter(function($product) use ($keyword) {
+                    $cleanDescription = strip_tags($product->description);
+                    return stripos($cleanDescription, $keyword) !== false;
+                });
+            });
+
+            Log::info("Full search for keyword '$keyword' found " . $products->count() . " products");
+
+            if ($products->isEmpty()) {
+                return response()->json([
+                    'message' => 'Không tìm thấy sản phẩm nào phù hợp với từ khóa.',
+                    'keyword' => $keyword
+                ], 404);
+            }
+
+            return response()->json([
+                'message' => 'Tìm thấy ' . $products->count() . ' sản phẩm',
+                'keyword' => $keyword,
+                'products' => $products
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error("Error in searchProductByAll: " . $e->getMessage());
+            return response()->json([
+                'message' => 'Đã xảy ra lỗi trong quá trình tìm kiếm: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // tìm kiểm sản phẩm theo tất cả thông tin từ tên tới description 
+
 }

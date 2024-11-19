@@ -151,6 +151,15 @@ class FlashSaleProductController extends Controller
             return response()->json(['message' => 'Flash Sale không tồn tại.'], 404);
         }
 
+        // Ẩn trường description và cost_price
+        $flashSale->products->each(function ($flashSaleProduct) {
+            $product = $flashSaleProduct->product;
+            $product->makeHidden(['description']);
+            $product->variants->each(function ($variant) {
+                $variant->makeHidden(['cost_price']);
+            });
+        });
+
         return response()->json([
             'data' => $flashSale
         ], 200);

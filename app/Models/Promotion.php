@@ -17,6 +17,7 @@ class Promotion extends Model
         'start_date',
         'end_date',
         'promotion_type',
+        'quantity',
         'minimum_order_value', // giá trị tối thiểu của đơn hàng
         'applicable_products', // sản phẩm/danh mục áp dụng
         'min_quantity', // số lượng sản phẩm tối thiểu

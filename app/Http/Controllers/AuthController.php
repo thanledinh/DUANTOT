@@ -25,7 +25,7 @@ class AuthController extends BaseController
             'username' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6',
-            'confirm_password' => 'required|same:password',
+
         ]);
 
         if ($validator->fails()) {
@@ -48,8 +48,19 @@ class AuthController extends BaseController
     {
         $credentials = $request->only('email', 'password');
 
+        // Thêm log để kiểm tra thông tin đăng nhập
+        \Log::info('Attempting login with credentials:', $credentials);
+
         if (!$token = auth('api')->attempt($credentials)) {
-            return response()->json(['message' => 'Unauthorized', 'error' => 'Unauthorized'], 401);
+            \Log::error('Login failed for email: ' . $request->email);
+
+            // Kiểm tra xem email có tồn tại không
+            $userExists = User::where('email', $request->email)->exists();
+            if (!$userExists) {
+                return response()->json(['message' => 'Unauthorized', 'error' => 'Email không tồn tại'], 401);
+            }
+
+            return response()->json(['message' => 'Unauthorized', 'error' => 'Mật khẩu không chính xác'], 401);
         }
 
         $user = User::where('email', $request->email)->first();
@@ -58,12 +69,10 @@ class AuthController extends BaseController
         if ($user->is_locked) {
             auth('api')->logout(); // Đảm bảo token không được cấp
 
-            return response()->json(['message' => 'Unauthorized', 'error' => 'Your account is locked. Please contact support.'], 403);
+            return response()->json(['message' => 'Unauthorized', 'error' => 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ hỗ trợ.'], 403);
         }
 
-        $success['token'] = $token;
-        $success['user'] = $user;
-        return response()->json(['success' => $success, 'message' => 'User login successfully'], 200);
+        return $this->createNewToken($token);
     }
 
     public function logout()
