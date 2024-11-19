@@ -255,12 +255,12 @@ Route::middleware(['ensure_token_is_valid'])->group(function () {
 Route::get('/search-products-all', [BoxChatAIController::class, 'searchProductByAll']);
 
 
-
-
+//blog
+Route::get('/blog', [BlogController::class, 'showBlogsUser']);  // Lấy danh sách blog
 Route::middleware(['ensure_token_is_valid'])->group(function () {
-    Route::get('blogs', [BlogController::class, 'index']);  // Lấy danh sách blog
-    Route::get('blogs/{id}', [BlogController::class, 'show']);  // Lấy chi tiết blog
-    Route::post('blogs', [BlogController::class, 'store']);  // Thêm blog mới
-    Route::put('blogs/{id}', [BlogController::class, 'update']);  // Cập nhật blog
-    Route::delete('blogs/{id}', [BlogController::class, 'destroy']);
+    Route::get('/blogs', [BlogController::class, 'index']);  // Lấy danh sách blog
+    Route::get('/blogs/{id}', [BlogController::class, 'show']);  // Lấy chi tiết blog
+    Route::post('/blogs', [BlogController::class, 'store']);  // Thêm blog mới
+    Route::put('/blogs/{id}', [BlogController::class, 'update']);  // Cập nhật blog
+    Route::delete('/blogs/{id}', [BlogController::class, 'destroy']);
 });
