@@ -100,6 +100,13 @@ class PromotionController extends Controller
         return response()->json(['promotions' => $promotions]);
     }
 
+    //lấy khuyến mãi còn thời hạn 
+    public function getActivePromotions()
+    {
+        $promotions = Promotion::whereDate('end_date', '>=', now())->get();
+        return response()->json(['promotions' => $promotions]);
+    }
+
     // Lấy chi tiết một mã khuyến mãi
     public function show($id)
     {
