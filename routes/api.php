@@ -24,6 +24,7 @@ use App\Http\Controllers\VNPayController;
 use App\Http\Controllers\ai\BoxChatAIController;
 use App\Http\Controllers\Admin\StatisticsController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\BlogController;
 
 // Auth Routes
 Route::group([
@@ -252,3 +253,14 @@ Route::middleware(['ensure_token_is_valid'])->group(function () {
 
 
 Route::get('/search-products-all', [BoxChatAIController::class, 'searchProductByAll']);
+
+
+
+
+Route::middleware(['ensure_token_is_valid'])->group(function () {
+    Route::get('blogs', [BlogController::class, 'index']);  // Lấy danh sách blog
+    Route::get('blogs/{id}', [BlogController::class, 'show']);  // Lấy chi tiết blog
+    Route::post('blogs', [BlogController::class, 'store']);  // Thêm blog mới
+    Route::put('blogs/{id}', [BlogController::class, 'update']);  // Cập nhật blog
+    Route::delete('blogs/{id}', [BlogController::class, 'destroy']);
+});
