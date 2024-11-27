@@ -27,6 +27,21 @@ class FlashSaleProduct extends Model
 
     public function product()
     {
-        return $this->belongsTo(Product::class);
+        return $this->belongsTo(Product::class, 'product_id');
+    }
+    
+
+    // Scope to get products in active Flash Sales
+    public function scopeInActiveFlashSale($query)
+    {
+        return $query->whereHas('flashSale', function ($q) {
+            $q->active(); // Sử dụng scopeActive từ FlashSale
+        });
+    }
+
+    // Check if product in Flash Sale is available
+    public function getIsAvailableAttribute()
+    {
+        return $this->stock_quantity > 0;
     }
 }

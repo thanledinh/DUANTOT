@@ -105,6 +105,14 @@ class OrderController extends Controller
                 $promotion = Promotion::find($request->id_promotion);
                 if ($promotion) {
                     if ($promotion->quantity > 0) {
+                        // Kiểm tra giá trị đơn hàng có đủ điều kiện không
+                        if ($total_price < $promotion->minimum_order_value) {
+                            return response()->json([
+                                'message' => 'Giá trị đơn hàng chưa đủ điều kiện để sử dụng mã khuyến mãi.',
+                                'error_code' => 'MINIMUM_ORDER_VALUE_NOT_MET',
+                                'minimum_order_value' => $promotion->minimum_order_value
+                            ], 400);
+                        }
                         if ($total_price >= $promotion->minimum_order_value) {
                             if ($promotion->discount_percentage) {
                                 $discount = ($total_price * $promotion->discount_percentage) / 100;
@@ -157,7 +165,7 @@ class OrderController extends Controller
             return response()->json([
                 'message' => 'Đơn hàng đã được tạo thành công.',
                 'order' => $order,
-                'shipping_cost' => $shipping_cost
+    
             ], 201);
         } catch (\Exception $e) {
             return response()->json([

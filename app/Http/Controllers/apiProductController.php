@@ -45,7 +45,7 @@ class apiProductController extends Controller
         $validatedData = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'type' => 'nullable|string|max:255',
+            'product_type_id' => 'sometimes|required|integer|exists:brands,id',
             'brand_id' => 'sometimes|required|integer|exists:brands,id',
             'category_id' => 'required|integer|exists:categories,id',
             'image' => 'nullable|string', // Đảm bảo trường này là nullable
@@ -58,6 +58,7 @@ class apiProductController extends Controller
             'variants.*.type' => 'nullable|string|max:255',
             'variants.*.image' => 'nullable|string',
             'variants.*.sale' => 'nullable|numeric',
+            'variants.*.cost_price' => 'required_with:variants|numeric',
         ]);
 
         // Xử lý hình ảnh sản phẩm nếu có
@@ -95,7 +96,7 @@ class apiProductController extends Controller
         $validatedData = $request->validate([
             'name' => 'sometimes|string|max:255',
             'description' => 'sometimes|string',
-            'type' => 'sometimes|string|max:255',
+            'product_type_id' => 'nullable|integer|exists:brands,id',
             'brand_id' => 'nullable|integer|exists:brands,id', // Allow null
             'category_id' => 'sometimes|integer|exists:categories,id',
             'image' => 'nullable|string',
@@ -109,6 +110,7 @@ class apiProductController extends Controller
             'variants.*.flavor' => 'nullable|string|max:255',
             'variants.*.type' => 'nullable|string|max:255',
             'variants.*.image' => 'nullable|string',
+            'variants.*.cost_price' => 'required_with:variants|numeric',
         ]);
 
         // Xử lý hình ảnh sản phẩm nếu có

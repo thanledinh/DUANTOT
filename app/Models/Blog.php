@@ -13,7 +13,9 @@ class Blog extends Model
         'user_id',  
         'title',
         'content',
-        'image_url'
+        'image_url',
+        'slug',
+        'description'
     ];
 
     protected $guarded = [];

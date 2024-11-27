@@ -26,7 +26,7 @@ class VNPayController extends Controller
         $vnp_TmnCode = 'FOTS7Y02'; // Mã website tại VNPAY
         $vnp_HashSecret = 'GZ7MH82IROI43JZSPSSEOXEPLY5ZCPYP'; // Chuỗi bí mật
         $vnp_Url = 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html'; // URL thanh toán VNPAY
-        $vnp_Returnurl = 'http://localhost:3000/payment-return'; // URL phản hồi sau thanh toán
+        $vnp_Returnurl = 'http://localhost:5173/payment-return'; // URL phản hồi sau thanh toán
 
         $vnp_TxnRef = $order->id; // Mã đơn hàng
         $vnp_OrderInfo = 'Thanh toan don hang ' . $vnp_TxnRef;
