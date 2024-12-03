@@ -173,6 +173,7 @@ Route::get('pending-orders', [OrderController::class, 'showPendingOrder']);
 Route::get('orders/{order_id}/check-shipping', [OrderController::class, 'checkShippingInfo']);
 Route::get('orders/shipping/list-orders-without-shipping', [OrderController::class, 'listOrdersWithoutShipping']);
 Route::get('orders/shipping/list-orders-with-shipping', [OrderController::class, 'listOrdersWithShipping']);
+Route::get('orders/tracking-code/{tracking_code},{phone}', [OrderController::class, 'showOrderByTrackingCode']);
 Route::post('orders', [OrderController::class, 'store']);
 Route::put('orders/{order_id}', [OrderController::class, 'update']);
 Route::delete('orders/{order_id}', [OrderController::class, 'destroy']);

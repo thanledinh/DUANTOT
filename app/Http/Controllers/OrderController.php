@@ -369,4 +369,24 @@ class OrderController extends Controller
             'orders' => $ordersWithShipping
         ], 200);
     }
+
+    public function showOrderByTrackingCode($tracking_code, $phone)
+    {
+        $order = Order::where('tracking_code', $tracking_code)
+            ->with(['items.product', 'items.variant', 'shipping'])
+            ->first();
+
+        if (!$order) {
+            return response()->json(['message' => 'Đơn hàng không tồn tại.'], 404);
+        }
+
+        if ($order->shipping && $order->shipping->phone !== $phone) {
+            return response()->json(['message' => 'Số điện thoại không chính xác.'], 400);
+        }
+
+        return response()->json([
+            'message' => 'Đơn hàng đã được lấy thành công.',
+            'order' => $order
+        ], 200);
+    }
 }
