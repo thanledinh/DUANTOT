@@ -51,6 +51,47 @@ class FlashSaleController extends Controller
         return response()->json(['message' => 'Expired flash sales processed successfully.']);
     }
 
+    public function checkAndApplyActiveSales()
+    {
+        $now = Carbon::now();
+        Log::info("Checking active Flash Sales at: " . $now);
+    
+        // Tìm các Flash Sale đang hoạt động
+        $activeSales = FlashSale::active()->get();
+        Log::info("Found active sales count: " . $activeSales->count());
+    
+        if ($activeSales->isEmpty()) {
+            Log::info("No active flash sales found.");
+            return response()->json(['message' => 'No active flash sales to process.']);
+        }
+    
+        foreach ($activeSales as $sale) {
+            Log::info("Processing active sale ID: " . $sale->id);
+    
+            // Lấy danh sách sản phẩm trong Flash Sale
+            $flashSaleProducts = $sale->products;
+            Log::info("Found products for active sale ID {$sale->id}: " . $flashSaleProducts->count());
+    
+            if ($flashSaleProducts->isEmpty()) {
+                Log::warning("No products found for active sale ID: " . $sale->id);
+            }
+    
+            foreach ($flashSaleProducts as $flashSaleProduct) {
+                $product = Product::find($flashSaleProduct->product_id);
+                if ($product) {
+                    Log::info("Applying discount to product ID: " . $product->id);
+                    $product->update(['sale' => $flashSaleProduct->discount_percentage]);
+                } else {
+                    Log::warning("Product not found for ID: " . $flashSaleProduct->product_id);
+                }
+            }
+        }
+    
+        return response()->json(['message' => 'Active flash sales processed successfully.']);
+    }
+    
+
+
     // show tất cả flash sale
     public function index()
     {
@@ -208,5 +249,7 @@ class FlashSaleController extends Controller
             'data' => $flashSalesData
         ], 200);
     }
+
+    
 
 }

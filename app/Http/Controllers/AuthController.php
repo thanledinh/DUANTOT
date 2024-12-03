@@ -10,10 +10,10 @@ use App\Models\User;
 
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
+
 
 use App\Mail\OtpMail;
 
@@ -49,10 +49,10 @@ class AuthController extends BaseController
         $credentials = $request->only('email', 'password');
 
         // Thêm log để kiểm tra thông tin đăng nhập
-        \Log::info('Attempting login with credentials:', $credentials);
+        Log::info('Attempting login with credentials:', $credentials);
 
         if (!$token = auth('api')->attempt($credentials)) {
-            \Log::error('Login failed for email: ' . $request->email);
+            Log::error('Login failed for email: ' . $request->email);
 
             // Kiểm tra xem email có tồn tại không
             $userExists = User::where('email', $request->email)->exists();

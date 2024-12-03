@@ -18,6 +18,26 @@ class FlashSale extends Model
 
     public function products()
     {
-        return $this->hasMany(FlashSaleProduct::class);
+        return $this->hasMany(FlashSaleProduct::class, 'flash_sale_id');
+    }
+    
+
+    // Scopes for filtering Flash Sales
+    public function scopeActive($query)
+    {
+        return $query->where('start_time', '<=', now())
+                     ->where('end_time', '>=', now());
+    }
+
+    public function scopeExpired($query)
+    {
+        return $query->where('end_time', '<', now());
+    }
+
+    // Check if Flash Sale is active
+    public function getIsActiveAttribute()
+    {
+        $now = now();
+        return $this->start_time <= $now && $this->end_time >= $now;
     }
 }

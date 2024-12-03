@@ -33,11 +33,10 @@ class AdminOrdersController extends Controller
         ], 200);
     }
 
-    // chỉnh sửa trạng thái nhiều đơn hàng
     public function updateMultiple(Request $request)
     {
         // Định nghĩa danh sách trạng thái hợp lệ
-        $validStatuses = ['Đang vận chuyển', 'Đã giao hàng', 'Đã hủy', 'Đã trả hàng'];
+        $validStatuses = ['processing', 'Tiếp nhận', 'Đang vận chuyển', 'Đã giao hàng', 'Đã hủy', 'Đã trả hàng'];
 
         // Xác thực yêu cầu
         $request->validate([

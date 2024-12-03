@@ -24,6 +24,8 @@ use App\Http\Controllers\VNPayController;
 use App\Http\Controllers\ai\BoxChatAIController;
 use App\Http\Controllers\Admin\StatisticsController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\BlogController;
+use App\Http\Controllers\ProductTypeController;
 
 // Auth Routes
 Route::group([
@@ -67,6 +69,10 @@ Route::middleware(['ensure_token_is_valid'])->group(function () {
     Route::get('/admin/products/search', [AdminProductsController::class, 'searchProducts']);
     Route::get('/admin/products/low-stock-alerts', [AdminProductsController::class, 'getLowStockAlerts']);
     Route::get('/admin/products/stock-history/{variantId}', [AdminProductsController::class, 'getStockHistory']);
+
+    Route::post('/admin/products', [apiProductController::class, 'store']);
+    Route::put('/products/products/{id}', [apiProductController::class, 'update']);
+    Route::delete('/admin/products/{id}', [apiProductController::class, 'delete']);
 });
 
 
@@ -90,11 +96,7 @@ Route::get('/products/category/{categoryId}', [apiProductController::class, 'get
 Route::get('/products/category/url/{categoryUrl}', [apiProductController::class, 'getProductsByCategoryUrl']);
 Route::get('/products/brand/{brandName}', [apiProductController::class, 'getProductsByBrand']);
 Route::get('/products/{id}/related', [apiProductController::class, 'getRelatedProducts']);
-Route::middleware(['ensure_token_is_valid'])->group(function () {
-    Route::post('/products', [apiProductController::class, 'store']);
-    Route::put('/products/products/{id}', [apiProductController::class, 'update']);
-    Route::delete('/products/{id}', [apiProductController::class, 'delete']);
-});
+
 
 // Variant Routes
 Route::prefix('variants')->group(function () {
@@ -125,12 +127,12 @@ Route::middleware(['ensure_token_is_valid'])->group(function () {
 // Product Review
 Route::get('/products/{productId}/reviews', [apiProductReviewController::class, 'index']);
 Route::get('/product-reviews', [apiProductReviewController::class, 'showProduct_reviewforUsser']);
+Route::post('/product-reviews', [apiProductReviewController::class, 'store']);
+
 Route::get('/admin/product-reviews', [apiProductReviewController::class, 'showProduct_reviewforAdmin']);
-Route::middleware(['ensure_token_is_valid'])->group(function () {
-    Route::post('/product-reviews', [apiProductReviewController::class, 'store']);
-    Route::post('/product-reviews/{id}/hide', [apiProductReviewController::class, 'hide']);
-    Route::delete('/product-reviews/{id}', [apiProductReviewController::class, 'destroy']);
-});
+Route::post('/product-reviews/{id}/hide', [apiProductReviewController::class, 'hide']);
+Route::delete('/product-reviews/{id}', [apiProductReviewController::class, 'destroy']);
+
 
 // Notifications
 Route::get('/notifications', [apiNotificationController::class, 'getUserNotifications']);
@@ -142,13 +144,14 @@ Route::middleware(['ensure_token_is_valid'])->group(function () {
 });
 
 Route::get('/promotions/active', [PromotionController::class, 'getActivePromotions']);
+Route::get('/promotions/code/{code}', [PromotionController::class, 'getPromotionByCode']);
 Route::middleware(['ensure_token_is_valid'])->group(function () {
     Route::post('/promotions/create', [PromotionController::class, 'create']);
     Route::get('/promotions', [PromotionController::class, 'index']);
     Route::get('/promotions/{id}', [PromotionController::class, 'show']);
     Route::put('/promotions/{id}', [PromotionController::class, 'update']);
     Route::delete('/promotions/{id}', [PromotionController::class, 'destroy']);
-    Route::get('/promotions/code/{code}', [PromotionController::class, 'getPromotionByCode']);
+    
 });
 
 
@@ -170,6 +173,7 @@ Route::get('pending-orders', [OrderController::class, 'showPendingOrder']);
 Route::get('orders/{order_id}/check-shipping', [OrderController::class, 'checkShippingInfo']);
 Route::get('orders/shipping/list-orders-without-shipping', [OrderController::class, 'listOrdersWithoutShipping']);
 Route::get('orders/shipping/list-orders-with-shipping', [OrderController::class, 'listOrdersWithShipping']);
+Route::get('orders/tracking-code/{tracking_code},{phone}', [OrderController::class, 'showOrderByTrackingCode']);
 Route::post('orders', [OrderController::class, 'store']);
 Route::put('orders/{order_id}', [OrderController::class, 'update']);
 Route::delete('orders/{order_id}', [OrderController::class, 'destroy']);
@@ -180,7 +184,8 @@ Route::get('flash-sales/show-by-date', [FlashSaleController::class, 'showFlashSa
 Route::get('flash-sales/{id}/products-and-variants', [FlashSaleProductController::class, 'showFlashSaleWithProductsAndVariants']);
 Route::get('flash-sales', [FlashSaleController::class, 'index']);
 Route::get('flash-sales/{id}/products', [FlashSaleController::class, 'showFlashSaleWithProducts']);
-Route::get('flash-sales/{id}', [FlashSaleController::class, 'show']);
+Route::get('flash-sales/{id}', [FlashSaleController::class, 'show']);   
+Route::get('flash-sales/apply-active', [FlashSaleController::class, 'checkAndApplyActiveSales']);
 Route::middleware(['ensure_token_is_valid'])->group(function () {
     Route::post('flash-sales/create', [FlashSaleController::class, 'store']);
     Route::put('flash-sales/update/{id}', [FlashSaleController::class, 'update']);
@@ -214,11 +219,8 @@ Route::get('product/{id}/price', [apiProductController::class, 'getProductPrice'
 // Payment Routes
 Route::get('payment/{order_id}', [PaymentController::class, 'getPaymentInfo']);
 Route::get('payment/transaction/{transaction_code}', [PaymentController::class, 'getLatestTransaction']);
-Route::middleware(['ensure_token_is_valid'])->group(function () {
-    Route::post('/create-payment', [VNPayController::class, 'createPayment']);
-    Route::post('/update-payment-status', [VNPayController::class, 'updatePaymentStatus']);
-});
-
+Route::post('/create-payment', [VNPayController::class, 'createPayment']);
+Route::post('/update-payment-status', [VNPayController::class, 'updatePaymentStatus']);
 // AI Routes
 Route::post('/ai/search-product', [BoxChatAIController::class, 'searchProduct']);
 
@@ -231,7 +233,12 @@ Route::middleware(['ensure_token_is_valid'])->group(function () {
     Route::get('/statistics/total-products', [StatisticsController::class, 'getTotalProducts']);
     Route::get('/statistics/orders-by-status', [StatisticsController::class, 'getOrdersByStatus']);
     Route::get('/statistics/voucher-usage', [StatisticsController::class, 'getVoucherUsage']);
+    Route::get('/statistics/totalrevenue', [StatisticsController::class, 'getTotalRevenue']);
+
 });
+Route::get('/statistics/calculate-profit', [StatisticsController::class, 'calculateProfit']);
+Route::get('/statistics/export-profit-toexcel', [StatisticsController::class, 'exportProfitToExcel']);
+Route::get('/statistics/download-profit-report', [StatisticsController::class, 'downloadProfitReport']);
 
 // User Routes
 
@@ -252,3 +259,25 @@ Route::middleware(['ensure_token_is_valid'])->group(function () {
 
 
 Route::get('/search-products-all', [BoxChatAIController::class, 'searchProductByAll']);
+
+
+//blog
+Route::get('/blog', [BlogController::class, 'showBlogsUser']);  // Lấy danh sách blog
+Route::middleware(['ensure_token_is_valid'])->group(function () {
+    Route::get('/blogs', [BlogController::class, 'index']);  // Lấy danh sách blog
+    Route::get('/blogs/{id}', [BlogController::class, 'show']);  // Lấy chi tiết blog
+    Route::post('/blogs', [BlogController::class, 'store']);  // Thêm blog mới
+    Route::put('/blogs/{id}', [BlogController::class, 'update']);  // Cập nhật blog
+    Route::delete('/blogs/{id}', [BlogController::class, 'destroy']);
+});
+
+// Product Type Routes
+Route::get('/product-types', [ProductTypeController::class, 'index']);
+Route::get('/product-types/{id}', [ProductTypeController::class, 'show']);
+Route::get('/product-types/{id}/products', [ProductTypeController::class, 'products']);
+Route::get('/blogs/slug/{slug}', [BlogController::class, 'showBySlug']);
+Route::middleware(['ensure_token_is_valid'])->group(function () {
+    Route::post('/product-types', [ProductTypeController::class, 'store']);
+    Route::put('/product-types/{id}', [ProductTypeController::class, 'update']);
+    Route::delete('/product-types/{id}', [ProductTypeController::class, 'destroy']);
+});

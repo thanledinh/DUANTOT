@@ -1081,6 +1081,17 @@ class Builder implements BuilderContract
     }
 
     /**
+     * Save a new model and return the instance without raising model events.
+     *
+     * @param  array  $attributes
+     * @return TModel
+     */
+    public function createQuietly(array $attributes = [])
+    {
+        return Model::withoutEvents(fn () => $this->create($attributes));
+    }
+
+    /**
      * Save a new model and return the instance. Allow mass-assignment.
      *
      * @param  array  $attributes
@@ -1537,8 +1548,8 @@ class Builder implements BuilderContract
     /**
      * Set the relationships that should be eager loaded.
      *
-     * @param  string|array  $relations
-     * @param  string|\Closure|null  $callback
+     * @param  array<array-key, array|(\Closure(\Illuminate\Database\Eloquent\Relations\Relation<*,*,*>): mixed)|string>|string  $relations
+     * @param  (\Closure(\Illuminate\Database\Eloquent\Relations\Relation<*,*,*>): mixed)|string|null  $callback
      * @return $this
      */
     public function with($relations, $callback = null)
@@ -1572,7 +1583,7 @@ class Builder implements BuilderContract
     /**
      * Set the relationships that should be eager loaded while removing any previously added eager loading specifications.
      *
-     * @param  mixed  $relations
+     * @param  array<array-key, array|(\Closure(\Illuminate\Database\Eloquent\Relations\Relation<*,*,*>): mixed)|string>|string  $relations
      * @return $this
      */
     public function withOnly($relations)
