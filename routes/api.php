@@ -197,6 +197,7 @@ Route::middleware(['ensure_token_is_valid'])->group(function () {
 
 // Flash Sale Product Routes
 Route::get('check/flash-sales/products', [FlashSaleController::class, 'checkAndRemoveExpiredSales']);
+Route::get('flash-sales-by-time-range', [FlashSaleController::class, 'getFlashSalesByTimeRange']);
 
 // User Routes
 Route::get('/users', [AdminUserController::class, 'index']);

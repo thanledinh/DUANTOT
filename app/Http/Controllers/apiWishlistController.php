@@ -24,21 +24,11 @@ class apiWishlistController extends Controller
       
     public function store(Request $request)
     {
-        // Xác thực người dùng bằng JWT
         $user = $request->user();
-
-        // Kiểm tra dữ liệu đầu vào
         $request->validate([
-            'product_id' => 'required|exists:products,id', // Kiểm tra product_id
+            'product_id' => 'required|exists:products,id', 
         ]);
 
-        // Kiểm tra số lượng sản phẩm yêu thích hiện tại
-        $currentFavoritesCount = Wishlist::where('user_id', $user->id)->count();
-        if ($currentFavoritesCount >= 5) {
-            return response()->json(['message' => 'Bạn chỉ có thể thêm tối đa 5 sản phẩm vào danh sách yêu thích.'], 400);
-        }
- 
-        // Thêm sản phẩm vào danh sách yêu thích
         $wishlistItem = new Wishlist();
         $wishlistItem->user_id = $user->id; // Lấy user_id từ JWT
         $wishlistItem->product_id = $request->product_id; // Lưu product_id
