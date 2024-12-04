@@ -51,45 +51,70 @@ class FlashSaleController extends Controller
         return response()->json(['message' => 'Expired flash sales processed successfully.']);
     }
 
-    public function checkAndApplyActiveSales()
+ 
+
+ 
+
+    public function getFlashSalesByTimeRange(Request $request)
     {
-        $now = Carbon::now();
-        Log::info("Checking active Flash Sales at: " . $now);
+        $now = Carbon::now();  
+        Log::info("Current time: " . $now);
     
-        // Tìm các Flash Sale đang hoạt động
-        $activeSales = FlashSale::active()->get();
-        Log::info("Found active sales count: " . $activeSales->count());
+       
+        $flashSales = FlashSale::where('status', '1')  // Kiểm tra flash sale đang hoạt động
+            ->where('start_time', '<=', $now)           // Flash sale bắt đầu trước hoặc bằng thời gian hiện tại
+            ->where('end_time', '>=', $now)             // Flash sale kết thúc sau hoặc bằng thời gian hiện tại
+            ->with(['flashSaleProducts.product'])       // Eager load các sản phẩm thuộc flash sale
+            ->get();
     
-        if ($activeSales->isEmpty()) {
-            Log::info("No active flash sales found.");
-            return response()->json(['message' => 'No active flash sales to process.']);
+        // Kiểm tra nếu không có Flash Sales nào
+        if ($flashSales->isEmpty()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No flash sales found for the current time.',
+                'current_time' => now()->toDateTimeString(),
+            ], 404);
         }
     
-        foreach ($activeSales as $sale) {
-            Log::info("Processing active sale ID: " . $sale->id);
+        // Chuẩn bị danh sách Flash Sales và sản phẩm
+        $flashSalesData = $flashSales->map(function ($flashSale) {
+            $products = $flashSale->flashSaleProducts->map(function ($flashSaleProduct) {
+                $product = $flashSaleProduct->product;
     
-            // Lấy danh sách sản phẩm trong Flash Sale
-            $flashSaleProducts = $sale->products;
-            Log::info("Found products for active sale ID {$sale->id}: " . $flashSaleProducts->count());
-    
-            if ($flashSaleProducts->isEmpty()) {
-                Log::warning("No products found for active sale ID: " . $sale->id);
-            }
-    
-            foreach ($flashSaleProducts as $flashSaleProduct) {
-                $product = Product::find($flashSaleProduct->product_id);
-                if ($product) {
-                    Log::info("Applying discount to product ID: " . $product->id);
-                    $product->update(['sale' => $flashSaleProduct->discount_percentage]);
-                } else {
-                    Log::warning("Product not found for ID: " . $flashSaleProduct->product_id);
+                // Kiểm tra và cập nhật giá sale của sản phẩm nếu cần
+                if ($flashSaleProduct->discount_percentage != $product->sale) {
+                    $product->sale = $flashSaleProduct->discount_percentage;
+                    $product->save();
                 }
-            }
-        }
     
-        return response()->json(['message' => 'Active flash sales processed successfully.']);
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'image' => $product->image,
+                    'original_price' => $product->original_price,
+                    'discount_percentage' => $flashSaleProduct->discount_percentage,
+                    'discounted_price' => $product->original_price * (1 - $flashSaleProduct->discount_percentage / 100),
+                    'stock_quantity' => $flashSaleProduct->stock_quantity,
+                    'quantity_limit_per_customer' => $flashSaleProduct->quantity_limit_per_customer,
+                ];
+            });
+    
+            return [
+                'id' => $flashSale->id,
+                'start_time' => $flashSale->start_time,
+                'end_time' => $flashSale->end_time,
+                'max_discount' => $flashSale->max_discount,
+                'products' => $products,
+            ];
+        });
+    
+        return response()->json([
+            'status' => 'success',
+        ], 200);
     }
     
+
+
 
 
     // show tất cả flash sale
@@ -117,7 +142,7 @@ class FlashSaleController extends Controller
             'data' => $flashSale
         ], 200);
     }
-    
+
     public function store(Request $request)
     {
         // Xác thực dữ liệu
@@ -250,6 +275,6 @@ class FlashSaleController extends Controller
         ], 200);
     }
 
-    
+
 
 }

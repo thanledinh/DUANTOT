@@ -20,6 +20,10 @@ class FlashSale extends Model
     {
         return $this->hasMany(FlashSaleProduct::class, 'flash_sale_id');
     }
+    public function flashSaleProducts()
+    {
+        return $this->hasMany(FlashSaleProduct::class, 'flash_sale_id');
+    }
     
 
     // Scopes for filtering Flash Sales

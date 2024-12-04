@@ -20,7 +20,7 @@ class apiProductController extends Controller
             $product->variants->makeHidden(['cost_price']);
             return $product;
         });
-        
+
         return response()->json($products, 200);
     }
     public function showWithoutHidden(Request $request)
@@ -28,7 +28,7 @@ class apiProductController extends Controller
         $products = Product::with('variants')->get()->map(function ($product) {
             return $product;
         });
-        
+
         return response()->json($products, 200);
     }
 
@@ -41,7 +41,7 @@ class apiProductController extends Controller
 
     public function store(Request $request)
     {
-        // Validate input
+        // Xác thực đầu vào
         $validatedData = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -60,6 +60,17 @@ class apiProductController extends Controller
             'variants.*.sale' => 'nullable|numeric',
             'variants.*.cost_price' => 'required_with:variants|numeric',
         ]);
+
+        // Kiểm tra mã vạch có bị trùng hay không
+        if (!empty($validatedData['barcode'])) {
+            $existingProduct = Product::where('barcode', $validatedData['barcode'])->first();
+            if ($existingProduct) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Mã vạch đã tồn tại. Vui lòng sử dụng mã vạch khác.',
+                ], 400);
+            }
+        }
 
         // Xử lý hình ảnh sản phẩm nếu có
         if (isset($validatedData['image'])) {
@@ -86,81 +97,82 @@ class apiProductController extends Controller
 
 
 
+
     public function update(Request $request, $id)
     {
-    try {
-        // Tìm sản phẩm dựa trên ID
-        $product = Product::findOrFail($id);
+        try {
+            // Tìm sản phẩm dựa trên ID
+            $product = Product::findOrFail($id);
 
-        // Validate dữ liệu từ request
-        $validatedData = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'description' => 'sometimes|string',
-            'product_type_id' => 'nullable|integer|exists:brands,id',
-            'brand_id' => 'nullable|integer|exists:brands,id', // Allow null
-            'category_id' => 'sometimes|integer|exists:categories,id',
-            'image' => 'nullable|string',
-            'barcode' => 'nullable|string|max:255',
-            'hot' => 'nullable|boolean',
-            'variants' => 'nullable|array',
-            'variants.*.id' => 'nullable|integer|exists:product_variants,id',  // Ensure variant exists
-            'variants.*.price' => 'required_with:variants|numeric',
-            'variants.*.stock_quantity' => 'required_with:variants|integer',
-            'variants.*.size' => 'nullable|string|max:255',
-            'variants.*.flavor' => 'nullable|string|max:255',
-            'variants.*.type' => 'nullable|string|max:255',
-            'variants.*.image' => 'nullable|string',
-            'variants.*.cost_price' => 'required_with:variants|numeric',
-        ]);
+            // Validate dữ liệu từ request
+            $validatedData = $request->validate([
+                'name' => 'sometimes|string|max:255',
+                'description' => 'sometimes|string',
+                'product_type_id' => 'nullable|integer|exists:brands,id',
+                'brand_id' => 'nullable|integer|exists:brands,id', // Allow null
+                'category_id' => 'sometimes|integer|exists:categories,id',
+                'image' => 'nullable|string',
+                'barcode' => 'nullable|string|max:255',
+                'hot' => 'nullable|boolean',
+                'variants' => 'nullable|array',
+                'variants.*.id' => 'nullable|integer|exists:product_variants,id',  // Ensure variant exists
+                'variants.*.price' => 'required_with:variants|numeric',
+                'variants.*.stock_quantity' => 'required_with:variants|integer',
+                'variants.*.size' => 'nullable|string|max:255',
+                'variants.*.flavor' => 'nullable|string|max:255',
+                'variants.*.type' => 'nullable|string|max:255',
+                'variants.*.image' => 'nullable|string',
+                'variants.*.cost_price' => 'required_with:variants|numeric',
+            ]);
 
-        // Xử lý hình ảnh sản phẩm nếu có
-        if (isset($validatedData['image'])) {
-            $validatedData['image'] = $this->handleImageUpload($validatedData['image'], 'product');
-        }
+            // Xử lý hình ảnh sản phẩm nếu có
+            if (isset($validatedData['image'])) {
+                $validatedData['image'] = $this->handleImageUpload($validatedData['image'], 'product');
+            }
 
-        // Cập nhật thông tin sản phẩm
-        $product->update($validatedData);
+            // Cập nhật thông tin sản phẩm
+            $product->update($validatedData);
 
-        // Xử lý các biến thể nếu có
-        if (!empty($validatedData['variants'])) {
-            foreach ($validatedData['variants'] as $variantData) {
-                // Tìm biến thể hiện tại (nếu có)
-                $variant = $product->variants()->find($variantData['id'] ?? null);
+            // Xử lý các biến thể nếu có
+            if (!empty($validatedData['variants'])) {
+                foreach ($validatedData['variants'] as $variantData) {
+                    // Tìm biến thể hiện tại (nếu có)
+                    $variant = $product->variants()->find($variantData['id'] ?? null);
 
-                if ($variant) {
-                    // Nếu biến thể tồn tại, cập nhật thông tin
-                    if (!isset($variantData['image'])) {
-                        $variantData['image'] = $variant->image;
+                    if ($variant) {
+                        // Nếu biến thể tồn tại, cập nhật thông tin
+                        if (!isset($variantData['image'])) {
+                            $variantData['image'] = $variant->image;
+                        } else {
+                            // Xử lý ảnh mới cho biến thể
+                            $variantData['image'] = $this->handleImageUpload($variantData['image'], 'variant');
+                        }
+
+                        // Cập nhật biến thể
+                        $variant->update($variantData);
                     } else {
-                        // Xử lý ảnh mới cho biến thể
-                        $variantData['image'] = $this->handleImageUpload($variantData['image'], 'variant');
-                    }
+                        // Nếu biến thể không tồn tại, tạo mới biến thể
+                        if (isset($variantData['image'])) {
+                            $variantData['image'] = $this->handleImageUpload($variantData['image'], 'variant');
+                        }
 
-                    // Cập nhật biến thể
-                    $variant->update($variantData);
-                } else {
-                    // Nếu biến thể không tồn tại, tạo mới biến thể
-                    if (isset($variantData['image'])) {
-                        $variantData['image'] = $this->handleImageUpload($variantData['image'], 'variant');
+                        // Tạo biến thể mới cho sản phẩm
+                        $product->variants()->create($variantData);
                     }
-
-                    // Tạo biến thể mới cho sản phẩm
-                    $product->variants()->create($variantData);
                 }
             }
+
+            // Trả về phản hồi với thông tin sản phẩm đã cập nhật, bao gồm cả các biến thể
+            return response()->json($product->load('variants'), 200);
+
+        } catch (\Exception $e) {
+            // Bắt lỗi và trả về thông báo lỗi chi tiết
+            return response()->json(['error' => $e->getMessage()], 500);
         }
-
-        // Trả về phản hồi với thông tin sản phẩm đã cập nhật, bao gồm cả các biến thể
-        return response()->json($product->load('variants'), 200);
-        
-    } catch (\Exception $e) {
-        // Bắt lỗi và trả về thông báo lỗi chi tiết
-        return response()->json(['error' => $e->getMessage()], 500);
     }
-}
 
-    
-    
+
+
 
     public function search($query)
     {
@@ -174,10 +186,20 @@ class apiProductController extends Controller
 
     public function delete($id)
     {
-        $product = Product::findOrFail($id);
+        $product = Product::find($id);
+        if (!$product) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Product not found.'
+            ], 404);
+        }
         $product->delete();
-        return response()->json(null, 204);
+        return response()->json([
+            'success' => true,
+            'message' => 'Product deleted successfully.'
+        ], 200);
     }
+
 
     private function handleImageUpload($imageData, $folder)
     {
@@ -310,31 +332,31 @@ class apiProductController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get();
         });
-    
+
         return response()->json($hotProducts);
     }
     public function removeMultipleHotStatus(Request $request)
     {
         // Lấy danh sách ID từ query string (hot-status=3,4,5)
         $productIds = explode(',', $request->query('hot-status'));
-    
+
         // Tìm các sản phẩm có ID trong danh sách
         $products = Product::whereIn('id', $productIds)->get();
-    
+
         if ($products->isEmpty()) {
             return response()->json(['message' => 'No products found for the given IDs'], 404);
         }
-    
+
         // Cập nhật trạng thái hot = 0 cho tất cả các sản phẩm tìm thấy
         foreach ($products as $product) {
             $product->hot = 0; // Cập nhật trạng thái hot thành 0 (gỡ bỏ)
             $product->save(); // Lưu thay đổi
         }
-    
+
         return response()->json(['message' => 'Hot status removed successfully', 'products' => $products]);
     }
-    
-    
+
+
 
     public function updateMultipleHotStatus(Request $request)
     {
