@@ -9,6 +9,8 @@ use App\Models\ProductVariant;
 use App\Models\FlashSaleProduct;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\ShippingConfirmation;
 
 class ShippingController extends Controller
 {
@@ -66,6 +68,10 @@ class ShippingController extends Controller
             $order->update(['status' => 'processing']);
 
             DB::commit();
+
+            // Gửi email xác nhận vận chuyển
+            Mail::to($shipping->email)->send(new ShippingConfirmation($shipping));
+
             return response()->json([
                 'message' => 'Thông tin vận chuyển đã được thêm thành công.',
                 'shipping' => $shipping
