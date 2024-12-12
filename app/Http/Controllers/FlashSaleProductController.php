@@ -75,7 +75,7 @@ class FlashSaleProductController extends Controller
                 ]
             ], 201);
         } catch (\Exception $e) {
-            \Log::error('Lỗi khi thêm sản phẩm vào Flash Sale: ' . $e->getMessage());
+            // \Log::error('Lỗi khi thêm sản phẩm vào Flash Sale: ' . $e->getMessage());
     
             return response()->json([
                 'message' => 'Có lỗi xảy ra khi thêm sản phẩm.',
@@ -111,7 +111,7 @@ class FlashSaleProductController extends Controller
                 'data' => $flashSaleProduct
             ], 200);
         } catch (QueryException $e) {
-            \Log::error('Lỗi khi cập nhật sản phẩm trong Flash Sale: ' . $e->getMessage());
+            // \Log::error('Lỗi khi cập nhật sản phẩm trong Flash Sale: ' . $e->getMessage());
 
             return response()->json([
                 'message' => 'Có lỗi xảy ra khi cập nhật sản phẩm.',
@@ -143,7 +143,7 @@ class FlashSaleProductController extends Controller
             return response()->json(['message' => 'Sản phẩm đã được xóa khỏi Flash Sale.'], 200);
 
         } catch (QueryException $e) {
-            \Log::error('Lỗi khi xóa sản phẩm khỏi Flash Sale: ' . $e->getMessage());
+            // \Log::error('Lỗi khi xóa sản phẩm khỏi Flash Sale: ' . $e->getMessage());
 
             return response()->json([
                 'message' => 'Có lỗi xảy ra khi xóa sản phẩm.',

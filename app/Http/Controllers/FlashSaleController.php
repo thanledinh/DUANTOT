@@ -139,7 +139,7 @@ class FlashSaleController extends Controller
             ], 201);
         } catch (\Exception $e) {
             // Log lỗi để dễ dàng kiểm tra
-            \Log::error($e->getMessage());
+            // \Log::error($e->getMessage());
 
             return response()->json([
                 'message' => 'Có lỗi xảy ra khi tạo Flash Sale.',
@@ -175,7 +175,7 @@ class FlashSaleController extends Controller
             ], 200);
         } catch (\Exception $e) {
             // Log lỗi
-            \Log::error($e->getMessage());
+            // \Log::error($e->getMessage());
 
             return response()->json([
                 'message' => 'Có lỗi xảy ra khi cập nhật Flash Sale.',
@@ -212,7 +212,7 @@ class FlashSaleController extends Controller
 
         } catch (\Exception $e) {
             // Log lỗi
-            \Log::error($e->getMessage());
+            // \Log::error($e->getMessage());
 
             return response()->json([
                 'message' => 'Có lỗi xảy ra khi xóa Flash Sale.',
