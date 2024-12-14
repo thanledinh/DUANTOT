@@ -16,7 +16,7 @@ class apiProductVariantController extends Controller
 
     public function showWithoutHidden()
     {
-        $products = ProductVariant::all();
+        $products = ProductVariant::orderBy('created_at', 'desc')->get();
         return response()->json($products, 200);
     }
 
@@ -44,14 +44,14 @@ class apiProductVariantController extends Controller
 
     public function getVariantByProductIdAndVariantId($product_id, $id)
     {
-    $variant = ProductVariant::where('product_id', $product_id)->where('id', $id)->first();
+        $variant = ProductVariant::where('product_id', $product_id)->where('id', $id)->first();
 
-    if (!$variant) {
-        return response()->json(['message' => 'Variant not found'], 404);
-    }
+        if (!$variant) {
+            return response()->json(['message' => 'Variant not found'], 404);
+        }
 
-    $variant->makeHidden(['cost_price']);
-    return response()->json($variant, 200);
+        $variant->makeHidden(['cost_price']);
+        return response()->json($variant, 200);
     }
 
     public function getVariantByProductIdAndVariantIdWithoutHidden($product_id, $id)
@@ -75,7 +75,7 @@ class apiProductVariantController extends Controller
 
         // Kiểm tra sự tồn tại của sản phẩm với cùng type, size, hoặc flavor
         $existingProduct = ProductVariant::where('product_id', $validatedData['product_id'])
-            ->where(function($query) use ($validatedData) {
+            ->where(function ($query) use ($validatedData) {
                 if (!empty($validatedData['type'])) {
                     $query->where('type', $validatedData['type']);
                 }
@@ -101,13 +101,13 @@ class apiProductVariantController extends Controller
     }
     public function update(Request $request, $id)
     {
-       
+
         $productVariant = ProductVariant::find($id);
         if (!$productVariant) {
             return response()->json(['message' => 'Variant không tồn tại'], 404);
         }
-    
-     
+
+
         $validatedData = $request->validate([
             'product_id' => 'nullable|exists:products,id',
             'price' => 'nullable|numeric',
@@ -118,19 +118,19 @@ class apiProductVariantController extends Controller
             'flavor' => 'nullable|string|max:255',
             'stock_quantity' => 'nullable|integer',
         ]);
-    
-     
+
+
         if (!empty($validatedData['image'])) {
             $validatedData['image'] = $this->handleImageUpload($validatedData['image']);
         }
-    
-      
+
+
         $productVariant->update($validatedData);
-    
-     
+
+
         return response()->json($productVariant, 200);
     }
-    
+
     public function delete($id)
     {
         $product = ProductVariant::find($id);

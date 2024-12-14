@@ -25,9 +25,12 @@ class apiProductController extends Controller
     }
     public function showWithoutHidden(Request $request)
     {
-        $products = Product::with('variants')->get()->map(function ($product) {
-            return $product;
-        });
+        $products = Product::with('variants')
+            ->latest()
+            ->get()
+            ->map(function ($product) {
+                return $product;
+            });
 
         return response()->json($products, 200);
     }

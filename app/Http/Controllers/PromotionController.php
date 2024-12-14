@@ -96,7 +96,7 @@ class PromotionController extends Controller
     // Lấy danh sách tất cả mã khuyến mãi
     public function index()
     {
-        $promotions = Promotion::all();
+        $promotions = Promotion::orderBy('created_at', 'desc')->get();
         return response()->json(['promotions' => $promotions]);
     }
 

@@ -10,8 +10,11 @@ class ProductTypeController extends Controller
 {
     public function index()
     {
-        return ProductType::all(); // Lấy tất cả loại sản phẩm
+        $productTypes = ProductType::orderBy('created_at', 'desc')->get();
+    
+        return response()->json($productTypes, 200);
     }
+    
 
     public function store(Request $request)
     {
