@@ -196,12 +196,32 @@ class apiProductController extends Controller
                 'message' => 'Product not found.'
             ], 404);
         }
+
+
+        if (!empty($product->image)) {
+            $productImagePath = public_path($product->image);
+            if (file_exists($productImagePath)) {
+                unlink($productImagePath);
+            }
+        }
+
+        foreach ($product->variants as $variant) {
+            if (!empty($variant->image)) {
+                $variantImagePath = public_path($variant->image);
+                if (file_exists($variantImagePath)) {
+                    unlink($variantImagePath);
+                }
+            }
+        }
+
         $product->delete();
+
         return response()->json([
             'success' => true,
-            'message' => 'Product deleted successfully.'
+            'message' => 'Product, its variants, and all associated images deleted successfully.'
         ], 200);
     }
+
 
 
     private function handleImageUpload($imageData, $folder)

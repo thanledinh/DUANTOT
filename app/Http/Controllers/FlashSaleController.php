@@ -120,7 +120,7 @@ class FlashSaleController extends Controller
     // show tất cả flash sale
     public function index()
     {
-        $flashSales = FlashSale::all();
+        $flashSales = FlashSale::orderBy('created_at', 'desc')->get();
         return response()->json([
             'data' => $flashSales
         ], 200);
