@@ -97,7 +97,6 @@ Route::get('/products/category/url/{categoryUrl}', [apiProductController::class,
 Route::get('/products/brand/{brandName}', [apiProductController::class, 'getProductsByBrand']);
 Route::get('/products/{id}/related', [apiProductController::class, 'getRelatedProducts']);
 
-
 // Variant Routes
 Route::prefix('variants')->group(function () {
     Route::get('/', [apiProductVariantController::class, 'index']);
@@ -145,10 +144,11 @@ Route::middleware(['ensure_token_is_valid'])->group(function () {
 
 Route::get('/promotions/active', [PromotionController::class, 'getActivePromotions']);
 Route::get('/promotions/code/{code}', [PromotionController::class, 'getPromotionByCode']);
+Route::get('/promotions/{id}', [PromotionController::class, 'show']);
 Route::middleware(['ensure_token_is_valid'])->group(function () {
     Route::post('/promotions/create', [PromotionController::class, 'create']);
     Route::get('/promotions', [PromotionController::class, 'index']);
-    Route::get('/promotions/{id}', [PromotionController::class, 'show']);
+    
     Route::put('/promotions/{id}', [PromotionController::class, 'update']);
     Route::delete('/promotions/{id}', [PromotionController::class, 'destroy']);
     
@@ -197,6 +197,7 @@ Route::middleware(['ensure_token_is_valid'])->group(function () {
 
 // Flash Sale Product Routes
 Route::get('check/flash-sales/products', [FlashSaleController::class, 'checkAndRemoveExpiredSales']);
+Route::get('flash-sales-by-time-range', [FlashSaleController::class, 'getFlashSalesByTimeRange']);
 
 // User Routes
 Route::get('/users', [AdminUserController::class, 'index']);

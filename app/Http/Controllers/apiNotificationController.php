@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Mail;
 use App\Models\UserNotification;
 use Illuminate\Support\Facades\Auth;
+use App\Mail\NotificationMail;
 
 
 class apiNotificationController extends Controller
@@ -18,8 +19,7 @@ class apiNotificationController extends Controller
     public function showAllNotifications()
     {
 
-        // Lấy tất cả thông báo
-        $notifications = Notification::all();
+        $notifications = Notification::orderBy('created_at', 'desc')->get();
 
         return response()->json($notifications, 200);
     }
@@ -57,11 +57,8 @@ class apiNotificationController extends Controller
                 // Thêm vào bảng user_notifications
                 $notification->users()->attach($user->id, $userNotificationData);
 
-                // Gửi email cho người dùng
-                Mail::raw($request->message, function ($message) use ($user) {
-                    $message->to($user->email)
-                        ->subject('Thông báo mới'); // Tiêu đề email
-                });
+                // Gửi email cho người dùng bằng template
+                Mail::to($user->email)->send(new NotificationMail($request->message));
             } else {
                 // Thêm email không tồn tại vào mảng
                 $notFoundEmails[] = $email;
@@ -80,7 +77,7 @@ class apiNotificationController extends Controller
     // Lấy danh sách thông báo của người dùng
     public function getUserNotifications()
     {
-        $notifications = Auth::user()->notifications()->get();
+        $notifications = Auth::user()->notifications()->orderBy('created_at', 'desc')->get();
         return response()->json($notifications, 200);
     }
 
@@ -105,9 +102,9 @@ class apiNotificationController extends Controller
         // Tìm thông báo
         $notification = Notification::findOrFail($id);
 
-            $notification->delete();
-            return response()->json(['message' => 'Thông báo đã được xóa thành công.'], 200);
-     
+        $notification->delete();
+        return response()->json(['message' => 'Thông báo đã được xóa thành công.'], 200);
+
         // Người dùng chỉ có thể xóa thông báo của chính họ
         $userNotification = UserNotification::where('notification_id', $id)
             ->where('user_id', Auth::id())
