@@ -14,10 +14,10 @@ class BlogController extends Controller
         $blogs = Blog::orderBy('created_at', 'desc')->get();
         return response()->json($blogs, 200);
     }
-    
+
     public function index()
     {
-        $blogs = Blog::all();
+        $blogs = Blog::orderBy('created_at', 'desc')->get();
         return response()->json($blogs, 200);
     }
     public function show($id)
@@ -104,10 +104,10 @@ class BlogController extends Controller
     {
         $slug = Str::slug($title);
         $count = Blog::where('slug', 'LIKE', "{$slug}%")
-                     ->when($id, function ($query, $id) {
-                         return $query->where('id', '!=', $id);
-                     })
-                     ->count();
+            ->when($id, function ($query, $id) {
+                return $query->where('id', '!=', $id);
+            })
+            ->count();
 
         return $count ? "{$slug}-{$count}" : $slug;
     }
@@ -118,7 +118,7 @@ class BlogController extends Controller
 
         if (!$blog) {
             return response()->json(['message' => 'Blog not found'], 404);
-        }    
+        }
 
         $blog->delete();
 

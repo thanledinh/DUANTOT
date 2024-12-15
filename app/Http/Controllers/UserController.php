@@ -11,7 +11,9 @@ class UserController extends Controller
 {
     public function index()
     {
-        $users = User::where('user_type', 'user')->get();
+        $users = User::where('user_type', 'user')
+            ->orderBy('created_at', 'desc')
+            ->get();
         return response()->json($users, 200);
     }
     public function show($id)
@@ -24,23 +26,23 @@ class UserController extends Controller
             return response()->json(['message' => 'Tài khoản đã bị khoá '], 403);
         }
         return response()->json($user, 200);
-    }   
-    
+    }
+
     public function update(Request $request, $id)
     {
         $user = User::find($id);
         if (!$user) {
             return response()->json(['message' => 'User fail'], 404);
         }
-            $request->validate([
+        $request->validate([
             'username' => 'sometimes|string|max:255|unique:users,username,' . $id,
             'email' => 'sometimes|string|email|max:255|unique:users,email,' . $id,
             'password' => 'sometimes|string|min:8',
             'address' => 'nullable|string',
             'phone_number' => 'nullable|string',
-            'user_type' => 'sometimes|string|in:user,admin', 
+            'user_type' => 'sometimes|string|in:user,admin',
         ]);
-            $user->update([
+        $user->update([
             'username' => $request->username ?? $user->username,
             'email' => $request->email ?? $user->email,
             'password' => $request->password ? Hash::make($request->password) : $user->password,
@@ -95,9 +97,11 @@ class UserController extends Controller
     // quản lý admin
     public function manageAdmins()
     {
-        $admins = User::where('user_type', 'admin')->get();
+        $admins = User::where('user_type', 'admin')
+        ->orderBy('created_at', 'desc')
+        ->get();
         return response()->json($admins, 200);
     }
-    
+
 
 }
