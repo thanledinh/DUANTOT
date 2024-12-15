@@ -144,10 +144,11 @@ Route::middleware(['ensure_token_is_valid'])->group(function () {
 
 Route::get('/promotions/active', [PromotionController::class, 'getActivePromotions']);
 Route::get('/promotions/code/{code}', [PromotionController::class, 'getPromotionByCode']);
+Route::get('/promotions/{id}', [PromotionController::class, 'show']);
 Route::middleware(['ensure_token_is_valid'])->group(function () {
     Route::post('/promotions/create', [PromotionController::class, 'create']);
     Route::get('/promotions', [PromotionController::class, 'index']);
-    Route::get('/promotions/{id}', [PromotionController::class, 'show']);
+    
     Route::put('/promotions/{id}', [PromotionController::class, 'update']);
     Route::delete('/promotions/{id}', [PromotionController::class, 'destroy']);
     

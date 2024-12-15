@@ -42,138 +42,120 @@ class OrderController extends Controller
             'items' => 'required|array',
             'items.*.product_id' => 'required|integer|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
-            'items.*.price' => 'required|numeric|min:0',
-            'items.*.variant_id' => 'required|integer|min:1',
+            'items.*.variant_id' => 'required|integer|exists:product_variants,id',
+            'items.*.price' => 'nullable|numeric|min:0',
             'items.*.sale' => 'nullable|numeric',
         ]);
-
+    
         try {
+            $items = $request->items;
+            $productIds = array_column($items, 'product_id');
+            $variantIds = array_column($items, 'variant_id');
+    
+            // Lấy thông tin sản phẩm và biến thể
+            $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
+            $variants = ProductVariant::whereIn('id', $variantIds)->get()->keyBy('id');
+    
             $total_price = 0;
-            foreach ($request->items as $item) {
-                $product = Product::find($item['product_id']);
-                $variant = ProductVariant::find($item['variant_id']);
-
-                // Kiểm tra số lượng tồn kho
-                if ($variant->stock_quantity < $item['quantity']) {
-                    return response()->json([
-                        'message' => 'Sản phẩm ' . $product->name . ' chỉ còn ' . $variant->stock_quantity . ' sản phẩm trong kho.',
-                        'id_product' => $product->id,
-                        'error_code' => 'INSUFFICIENT_STOCK',
-                        'available_stock' => $variant->stock_quantity
-                    ], 400);
+    
+            foreach ($items as $item) {
+                $product = $products[$item['product_id']] ?? null;
+                $variant = $variants[$item['variant_id']] ?? null;
+            
+                if (!$product || !$variant) {
+                    return response()->json(['message' => 'Sản phẩm hoặc biến thể không hợp lệ.'], 400);
                 }
-
-                if ($product && $this->isSaleValid($product, $item['sale'])) {
-                    $discounted_price = $item['price'] - ($item['price'] * $item['sale'] / 100);
-                    
-                    // Tính tổng giá cho sản phẩm với logic mới
-                    if ($item['quantity'] > 1) {
-                        $total_price += $discounted_price + ($item['price'] * ($item['quantity'] - 1));
-                    } else {
-                        $total_price += $discounted_price * $item['quantity'];
-                    }
-                } else {
+            
+                // Nếu giá được người dùng gửi không đúng, thay bằng giá của variant
+                if ($item['price'] !== null && $item['price'] != $variant->price) {
+                    $item['price'] = $variant->price; // Thay giá bằng giá của variant
+                }
+            
+                // Tính toán giá sau khi áp dụng giảm giá
+                $final_price = $this->calculateDiscountedPrice($item['price'], $product->sale);
+            
+                // Kiểm tra giá trị sale hợp lệ cho sản phẩm
+                if ($item['sale'] !== null && $item['sale'] > $product->sale) {
                     return response()->json([
                         'message' => 'Giá trị sale không hợp lệ cho sản phẩm ' . $product->name,
                         'id_product' => $product->id,
                         'error_code' => 'INVALID_SALE_VALUE',
                         'product_db_sale' => $product->sale,
                         'provided_sale' => $item['sale'],
-                        'is_numeric_sale' => is_numeric($item['sale'])
                     ], 400);
                 }
-            }
-
-            $order = new Order();
-            if (auth()->guard('api')->check()) {
-                $order->user_id = auth()->guard('api')->id();
-            } else {
-                $order->user_id = null;
-            }
-            $order->tracking_code = strtoupper(Str::random(10));
-            $order->id_promotion = $request->id_promotion ?? null;
             
-            $order->order_date = now();
-            $order->total_price = $total_price;
-            $order->status = 'pending';
-            $order->payment_method = $request->payment_method;
-
-            $order->note = $request->note ?? null;
+                // Cập nhật lại giá trị cuối cùng cho `price` và `sale` của mỗi `OrderItem`
+                $total_price += $final_price * $item['quantity'];
+            }
+            
+    
+            // Xử lý mã khuyến mãi
+            $promotion = null;
             $shipping_cost = 40000;
-
+    
             if ($request->id_promotion) {
                 $promotion = Promotion::find($request->id_promotion);
-                if ($promotion) {
-                    if ($promotion->quantity > 0) {
-                        // Kiểm tra giá trị đơn hàng có đủ điều kiện không
-                        if ($total_price < $promotion->minimum_order_value) {
-                            return response()->json([
-                                'message' => 'Giá trị đơn hàng chưa đủ điều kiện để sử dụng mã khuyến mãi.',
-                                'error_code' => 'MINIMUM_ORDER_VALUE_NOT_MET',
-                                'minimum_order_value' => $promotion->minimum_order_value
-                            ], 400);
-                        }
-                        if ($total_price >= $promotion->minimum_order_value) {
-                            if ($promotion->discount_percentage) {
-                                $discount = ($total_price * $promotion->discount_percentage) / 100;
-                                $order->total_price -= $discount;
-                            } elseif ($promotion->discount_amount) {
-                                $order->total_price -= $promotion->discount_amount;
-                            }
-                            if ($promotion->free_shipping) {
-                                $shipping_cost = 0;
-                            }
-                            $order->total_price = max(0, $order->total_price);
-                            $promotion->decrement('quantity'); // Giảm số lượng mã khuyến mãi
-                        }
-                    } else {
+    
+                if ($promotion && $promotion->quantity > 0) {
+                    if ($total_price < $promotion->minimum_order_value) {
                         return response()->json([
-                            'message' => 'Mã khuyến mãi đã hết số lượng.',
-                            'error_code' => 'PROMOTION_OUT_OF_STOCK'
+                            'message' => 'Giá trị đơn hàng chưa đủ điều kiện.',
                         ], 400);
                     }
-                }
-            }
-
-            $order->total_price += $shipping_cost;
-            $order->save();
-
-            foreach ($request->items as $item) {
-                $product = Product::find($item['product_id']);
-                if ($product && $this->isSaleValid($product, $item['sale'])) {
-                    $discounted_price = $item['price'] - ($item['price'] * $item['sale'] / 100);
-                    OrderItem::create([
-                        'order_id' => $order->id,
-                        'product_id' => $item['product_id'],
-                        'quantity' => $item['quantity'],
-                        'variant_id' => $item['variant_id'],
-                        'price' => $discounted_price,
-                        'sale' => $item['sale'] ?? 0,
-                    ]); 
-                } else {
-                    return response()->json([
-                        'message' => 'Giá trị sale không hợp lệ cho sản phẩm ' . $product->name,
-                        'id_product' => $product->id,
-                        'error_code' => 'INVALID_SALE_VALUE',
-                        'product_db_sale' => $product->sale,
-                        'provided_sale' => $item['sale'],
-                        'is_numeric_sale' => is_numeric($item['sale'])
-                    ], 400);
-                }
-            }
-
-            return response()->json([
-                'message' => 'Đơn hàng đã được tạo thành công.',
-                'order' => $order,
     
-            ], 201);
+                    if ($promotion->discount_percentage) {
+                        $discount = ($total_price * $promotion->discount_percentage) / 100;
+                        $total_price -= $discount;
+                    } elseif ($promotion->discount_amount) {
+                        $total_price -= $promotion->discount_amount;
+                    }
+    
+                    if ($promotion->free_shipping) {
+                        $shipping_cost = 0;
+                    }
+    
+                    $promotion->decrement('quantity');
+                } else {
+                    return response()->json(['message' => 'Mã khuyến mãi không hợp lệ hoặc đã hết.'], 400);
+                }
+            }
+    
+            $order = Order::create([
+                'user_id' => auth()->guard('api')->id() ?? null,
+                'tracking_code' => strtoupper(Str::random(10)),
+                'id_promotion' => $request->id_promotion,
+                'order_date' => now(),
+                'total_price' => $total_price + $shipping_cost,
+                'status' => 'pending',
+                'payment_method' => $request->payment_method,
+                'note' => $request->note,
+            ]);
+    
+            foreach ($items as $item) {
+                // Sử dụng giá đã được điều chỉnh (nếu có)
+                OrderItem::create([
+                    'order_id' => $order->id,
+                    'product_id' => $item['product_id'],
+                    'variant_id' => $item['variant_id'],
+                    'quantity' => $item['quantity'],
+                    'price' => $item['price'],
+                    'sale' => $products[$item['product_id']]->sale,
+                ]);
+            }
+    
+            return response()->json(['message' => 'Đơn hàng đã được tạo thành công.', 'order' => $order], 201);
+    
         } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Đã xảy ra lỗi khi tạo đơn hàng.',
-                'error' => $e->getMessage()
-            ], 500);
+            return response()->json(['message' => 'Đã xảy ra lỗi.', 'error' => $e->getMessage()], 500);
         }
     }
+
+    private function calculateDiscountedPrice($price, $sale)
+{
+    return $price - ($price * $sale / 100);
+}
+    
 
     private function isSaleValid($product, $sale)
     {

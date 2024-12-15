@@ -98,7 +98,7 @@ class FlashSaleController extends Controller
                     'quantity_limit_per_customer' => $flashSaleProduct->quantity_limit_per_customer,
                 ];
             });
-    
+
             return [
                 'id' => $flashSale->id,
                 'start_time' => $flashSale->start_time,
