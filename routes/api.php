@@ -81,6 +81,7 @@ Route::middleware(['ensure_token_is_valid'])->group(function () {
     Route::get('/admin/orders', [AdminOrdersController::class, 'index']);
     Route::get('/admin/orders/{pageSize}/{page}', [AdminOrdersController::class, 'show']);
     Route::put('/admin/orders/trang-thai/update-multiple', [AdminOrdersController::class, 'updateMultiple']);
+    Route::put('/admin/orders/trang-thai/{order_id}', [AdminOrdersController::class, 'updateStatusOrder']);
 });
 
 // Product Routes
