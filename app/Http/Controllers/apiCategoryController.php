@@ -10,14 +10,19 @@ class apiCategoryController extends Controller
     // Lấy danh sách tất cả các category cùng với subcategories
     public function index()
     {
-        $categories = Category::whereNull('parent_id')->get();
+        $categories = Category::whereNull('parent_id')
+            ->orderBy('created_at', 'desc')
+            ->get();
 
         foreach ($categories as $category) {
-            $category->subcategories = Category::where('parent_id', $category->id)->get();
+            $category->subcategories = Category::where('parent_id', $category->id)
+                ->orderBy('created_at', 'desc')
+                ->get();
         }
 
         return response()->json($categories);
     }
+
 
     // Tạo mới một category
     public function store(Request $request)
@@ -123,14 +128,18 @@ class apiCategoryController extends Controller
     // Lấy danh sách tất cả các subcategories
     public function getSubcategories()
     {
-        $subcategories = Category::whereNotNull('parent_id')->get();
+        $subcategories = Category::whereNotNull('parent_id')
+        ->orderBy('created_at', 'desc')
+        ->get();
         return response()->json($subcategories);
     }
     // Lấy danh sách tất cả các categories không có parent_id
     public function getParentCategories()
     {
-        $parentCategories = Category::whereNull('parent_id')->get();
+        $parentCategories = Category::whereNull('parent_id')
+        ->orderBy('created_at', 'desc')
+        ->get();
         return response()->json($parentCategories);
     }
-    
+
 }

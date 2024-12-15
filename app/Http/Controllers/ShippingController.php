@@ -70,7 +70,7 @@ class ShippingController extends Controller
             DB::commit();
 
             // Gửi email xác nhận vận chuyển
-            Mail::to($shipping->email)->send(new ShippingConfirmation($shipping));
+            Mail::to($shipping->email)->send(new ShippingConfirmation($shipping, $order));
 
             return response()->json([
                 'message' => 'Thông tin vận chuyển đã được thêm thành công.',
