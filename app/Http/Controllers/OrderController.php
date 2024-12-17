@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FlashSale;
+use App\Models\FlashSaleProduct;
 use Illuminate\Support\Str;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -65,7 +67,17 @@ class OrderController extends Controller
                 if (!$product || !$variant) {
                     return response()->json(['message' => 'Sản phẩm hoặc biến thể không hợp lệ.'], 400);
                 }
-            
+                // kiễm tra sản phẩm có tham gia sale không
+                $flashSaleProduct = FlashSaleProduct::where('product_id', $item['product_id'])->first();
+                
+                if ($flashSaleProduct) {
+                $flashSale = FlashSale::find($flashSaleProduct->flash_sale_id);
+
+                if ($flashSale && now()->greaterThan($flashSale->end_time)) {
+                    return response()->json(['message' => 'Flash sale đã hết hạn cho sản phẩm ' . $product->name], 400);
+                }
+                }
+
                 // Nếu giá được người dùng gửi không đúng, thay bằng giá của variant
                 if ($item['price'] !== null && $item['price'] != $variant->price) {
                     $item['price'] = $variant->price; // Thay giá bằng giá của variant
@@ -130,6 +142,7 @@ class OrderController extends Controller
                 'status' => 'pending',
                 'payment_method' => $request->payment_method,
                 'note' => $request->note,
+                
             ]);
     
             foreach ($items as $item) {
@@ -143,7 +156,10 @@ class OrderController extends Controller
                     'sale' => $products[$item['product_id']]->sale,
                 ]);
             }
-    
+             if ($request->has('cancel_order') && $request->cancel_order) {
+            $order->update(['status' => 'canceled']);
+            return response()->json(['message' => 'Đơn hàng đã bị hủy.', 'order' => $order], 200);
+            }
             return response()->json(['message' => 'Đơn hàng đã được tạo thành công.', 'order' => $order], 201);
     
         } catch (\Exception $e) {

@@ -26,6 +26,7 @@ use App\Http\Controllers\Admin\StatisticsController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\ProductTypeController;
+use App\Http\Controllers\BillController;
 
 // Auth Routes
 Route::group([
@@ -282,3 +283,8 @@ Route::middleware(['ensure_token_is_valid'])->group(function () {
     Route::put('/product-types/{id}', [ProductTypeController::class, 'update']);
     Route::delete('/product-types/{id}', [ProductTypeController::class, 'destroy']);
 });
+
+
+
+Route::get('/bills', [BillController::class, 'getAllBills']);
+Route::get('/export-bill/{orderId}', [BillController::class, 'exportBill']);
