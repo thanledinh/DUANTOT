@@ -15,6 +15,7 @@ class Shipping extends Model
         'shipping_address',
         'city',
         'district',
+        'ward',
         'phone',
         'shipping_method',
         'shipping_cost',

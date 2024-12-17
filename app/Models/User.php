@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 
 class User extends Authenticatable implements JWTSubject
@@ -63,8 +64,24 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(Wishlist::class);
     }
 
+
+
+
+     public function notifications()
+     {
+         return $this->belongsToMany(Notification::class, 'user_notifications')
+                     ->withPivot('status')
+                     ->withTimestamps();
+     }
+
     /**
-     * Quan hệ với các sản phẩm đã yêu thích
+     * Kiểm tra xem người dùng có phải là admin không.
+     *
+     * @return bool
      */
-   
+    public function isAdmin(): bool
+    {
+        // Sử dụng cột 'user_type' để xác định vai trò admin
+        return $this->user_type === 'admin';
+    }
 }

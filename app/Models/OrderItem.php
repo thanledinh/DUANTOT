@@ -11,7 +11,8 @@ class OrderItem extends Model
         'order_id',
         'variant_id',
         'quantity',
-        'price'
+        'price',
+        'sale'
     ];
     public function product()
     {
@@ -24,5 +25,9 @@ class OrderItem extends Model
     public function variant()
     {
         return $this->belongsTo(ProductVariant::class, 'variant_id');
+    }
+    public function flashSaleProduct()
+    {
+        return $this->belongsTo(FlashSaleProduct::class, 'product_id', 'product_id');
     }
 }

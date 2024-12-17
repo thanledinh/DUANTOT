@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FlashSale;
+use App\Models\FlashSaleProduct;
 use Illuminate\Support\Str;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Promotion;
 use Illuminate\Http\Request;
+use App\Models\ProductVariant;
+use App\Models\Product;
 
 class OrderController extends Controller
 {
@@ -36,74 +40,145 @@ class OrderController extends Controller
         $request->validate([
             'id_promotion' => 'nullable|integer|exists:promotions,id',
             'payment_method' => 'required|string|in:cash,vnpay',
-            'sale' => 'nullable|numeric',
             'note' => 'nullable|string',
             'items' => 'required|array',
             'items.*.product_id' => 'required|integer|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
-            'items.*.price' => 'required|numeric|min:0',
-            'items.*.variant_id' => 'required|integer|min:1',
+            'items.*.variant_id' => 'required|integer|exists:product_variants,id',
+            'items.*.price' => 'nullable|numeric|min:0',
+            'items.*.sale' => 'nullable|numeric',
         ]);
+    
         try {
+            $items = $request->items;
+            $productIds = array_column($items, 'product_id');
+            $variantIds = array_column($items, 'variant_id');
+    
+            // Lấy thông tin sản phẩm và biến thể
+            $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
+            $variants = ProductVariant::whereIn('id', $variantIds)->get()->keyBy('id');
+    
             $total_price = 0;
-            foreach ($request->items as $item) {
-                $total_price += $item['price'] * $item['quantity'];
-            }
+    
+            foreach ($items as $item) {
+                $product = $products[$item['product_id']] ?? null;
+                $variant = $variants[$item['variant_id']] ?? null;
+            
+                if (!$product || !$variant) {
+                    return response()->json(['message' => 'Sản phẩm hoặc biến thể không hợp lệ.'], 400);
+                }
+                // kiễm tra sản phẩm có tham gia sale không
+                $flashSaleProduct = FlashSaleProduct::where('product_id', $item['product_id'])->first();
+                
+                if ($flashSaleProduct) {
+                $flashSale = FlashSale::find($flashSaleProduct->flash_sale_id);
 
-            $order = new Order();
-            if (auth()->guard('api')->check()) {
-                $order->user_id = auth()->guard('api')->id();
-            } else {
-                $order->user_id = null;
+                if ($flashSale && now()->greaterThan($flashSale->end_time)) {
+                    return response()->json(['message' => 'Flash sale đã hết hạn cho sản phẩm ' . $product->name], 400);
+                }
+                }
+
+                // Nếu giá được người dùng gửi không đúng, thay bằng giá của variant
+                if ($item['price'] !== null && $item['price'] != $variant->price) {
+                    $item['price'] = $variant->price; // Thay giá bằng giá của variant
+                }
+            
+                // Tính toán giá sau khi áp dụng giảm giá
+                $final_price = $this->calculateDiscountedPrice($item['price'], $product->sale);
+            
+                // Kiểm tra giá trị sale hợp lệ cho sản phẩm
+                if ($item['sale'] !== null && $item['sale'] > $product->sale) {
+                    return response()->json([
+                        'message' => 'Giá trị sale không hợp lệ cho sản phẩm ' . $product->name,
+                        'id_product' => $product->id,
+                        'error_code' => 'INVALID_SALE_VALUE',
+                        'product_db_sale' => $product->sale,
+                        'provided_sale' => $item['sale'],
+                    ], 400);
+                }
+            
+                // Cập nhật lại giá trị cuối cùng cho `price` và `sale` của mỗi `OrderItem`
+                $total_price += $final_price * $item['quantity'];
             }
-            $order->tracking_code = strtoupper(Str::random(10));
-            $order->id_promotion = $request->id_promotion ?? null;
-            $order->order_date = now();
-            $order->total_price = $total_price;
-            $order->status = 'pending';
-            $order->payment_method = $request->payment_method;
-            $order->sale = $request->sale ?? 0;
-            $order->note = $request->note ?? null;
+            
+    
+            // Xử lý mã khuyến mãi
+            $promotion = null;
             $shipping_cost = 40000;
+    
             if ($request->id_promotion) {
                 $promotion = Promotion::find($request->id_promotion);
-                if ($promotion) {
-                    if ($total_price >= $promotion->minimum_order_value) {
-                        if ($promotion->discount_percentage) {
-                            $discount = ($total_price * $promotion->discount_percentage) / 100;
-                            $order->total_price -= $discount;
-                        } elseif ($promotion->discount_amount) {
-                            $order->total_price -= $promotion->discount_amount;
-                        }
-                        if ($promotion->free_shipping) {
-                            $shipping_cost = 0;
-                        }
-                        $order->total_price = max(0, $order->total_price);
+    
+                if ($promotion && $promotion->quantity > 0) {
+                    if ($total_price < $promotion->minimum_order_value) {
+                        return response()->json([
+                            'message' => 'Giá trị đơn hàng chưa đủ điều kiện.',
+                        ], 400);
                     }
+    
+                    if ($promotion->discount_percentage) {
+                        $discount = ($total_price * $promotion->discount_percentage) / 100;
+                        $total_price -= $discount;
+                    } elseif ($promotion->discount_amount) {
+                        $total_price -= $promotion->discount_amount;
+                    }
+    
+                    if ($promotion->free_shipping) {
+                        $shipping_cost = 0;
+                    }
+    
+                    $promotion->decrement('quantity');
+                } else {
+                    return response()->json(['message' => 'Mã khuyến mãi không hợp lệ hoặc đã hết.'], 400);
                 }
             }
-            $order->save();
-            foreach ($request->items as $item) {
+    
+            $order = Order::create([
+                'user_id' => auth()->guard('api')->id() ?? null,
+                'tracking_code' => strtoupper(Str::random(10)),
+                'id_promotion' => $request->id_promotion,
+                'order_date' => now(),
+                'total_price' => $total_price + $shipping_cost,
+                'status' => 'pending',
+                'payment_method' => $request->payment_method,
+                'note' => $request->note,
+                
+            ]);
+    
+            foreach ($items as $item) {
+                // Sử dụng giá đã được điều chỉnh (nếu có)
                 OrderItem::create([
                     'order_id' => $order->id,
                     'product_id' => $item['product_id'],
-                    'quantity' => $item['quantity'],
                     'variant_id' => $item['variant_id'],
+                    'quantity' => $item['quantity'],
                     'price' => $item['price'],
+                    'sale' => $products[$item['product_id']]->sale,
                 ]);
             }
-            return response()->json([
-                'message' => 'Đơn hàng đã được tạo thành công.',
-                'order' => $order,
-                'shipping_cost' => $shipping_cost
-            ], 201);
+             if ($request->has('cancel_order') && $request->cancel_order) {
+            $order->update(['status' => 'canceled']);
+            return response()->json(['message' => 'Đơn hàng đã bị hủy.', 'order' => $order], 200);
+            }
+            return response()->json(['message' => 'Đơn hàng đã được tạo thành công.', 'order' => $order], 201);
+    
         } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Đã xảy ra lỗi khi tạo đơn hàng.',
-                'error' => $e->getMessage()
-            ], 500);
+            return response()->json(['message' => 'Đã xảy ra lỗi.', 'error' => $e->getMessage()], 500);
         }
     }
+
+    private function calculateDiscountedPrice($price, $sale)
+{
+    return $price - ($price * $sale / 100);
+}
+    
+
+    private function isSaleValid($product, $sale)
+    {
+        // Kiểm tra nếu sale gửi lên giống với sale trong DB
+        return is_numeric($sale) && $sale == $product->sale;
+    }
+
     public function update(Request $request, $id)
     {
         $user = $request->user();
@@ -112,7 +187,7 @@ class OrderController extends Controller
         }
         $order = Order::where('user_id', $user->id)->find($id);
         if (!$order) {
-            return response()->json(['message' => 'Đơn hàng không tồn tại hoặc không thuộc về người dùng.'], 404);
+            return response()->json(['message' => 'Đơn hàng không tồn tại hoặc không thuộc về người dng.'], 404);
         }
         if ($order->status == 'processed' || $order->status == 'completed') {
             return response()->json(['message' => 'Không thể thay đổi trạng thái của đơn hàng đã được xử lý hoặc hoàn thành.'], 403);
@@ -152,25 +227,56 @@ class OrderController extends Controller
         if ($order->user_id !== $request->user()->id) {
             return response()->json(['message' => 'Bạn không có quyền xóa đơn hàng này.'], 403);
         }
+
+        // {{ edit_1 }} - Hoàn lại stock quantity cho từng item trong đơn hàng
+        foreach ($order->items as $item) {
+            $variant = ProductVariant::find($item->variant_id); // Get the product variant
+            if ($variant) {
+                $variant->stock_quantity += $item->quantity; // Restore stock quantity
+                $variant->save(); // Save the updated variant
+            }
+        }
         $order->delete();
         return response()->json(['message' => 'Đơn hàng đã được xóa thành công.'], 200);
     }
     public function showOrder($id)
     {
-        $order = Order::with('items.product', 'items.variant')->find($id);
+        $order = Order::with(['items.product', 'items.variant', 'shipping'])->find($id);
         if (!$order) {
             return response()->json(['message' => 'Đơn hàng không tồn tại.'], 404);
         }
+
+        // {{ edit_1 }} Định dạng số điện thoại
+        if ($order->shipping) {
+            $order->shipping->phone = $this->formatPhoneNumber($order->shipping->phone);
+        }
+        // {{ edit_1 }}
+
         return response()->json([
             'message' => 'Đơn hàng đã được lấy thành công.',
             'order' => $order
         ], 200);
     }
-    public function showPendingOrder()
+
+    // {{ edit_2 }} Hàm định dạng số điện thoại
+    private function formatPhoneNumber($phone)
     {
+        return substr($phone, 0, 3) . '*****' . substr($phone, -2);
+    }
+
+
+    public function showPendingOrder(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Bạn cần phải đăng nhập để xem đơn hàng.'], 401);
+        }
+
         $orders = Order::where('status', 'pending')
+            ->where('user_id', $user->id) // Lọc theo user_id
             ->with(['items.product', 'items.variant'])
             ->get();
+
         return response()->json([
             'message' => 'Đơn hàng đã được lấy thành công.',
             'orders' => $orders
@@ -198,7 +304,7 @@ class OrderController extends Controller
     public function checkShippingInfo($orderId)
     {
         $order = Order::find($orderId);
-        
+
         if (!$order) {
             return response()->json(['message' => 'Đơn hàng không tồn tại.'], 404);
         }
@@ -243,22 +349,42 @@ class OrderController extends Controller
         $user = $request->user();
         if (!$user) {
             return response()->json(['message' => 'Bạn cần phải đăng nhập để xem đơn hàng.'], 401);
-        }   
+        }
 
         $orders = Order::where('user_id', $user->id)
-            ->with('items.product', 'items.variant')
+            ->with(['items.product', 'items.variant'])
             ->get();
 
         $ordersWithShipping = [];
         foreach ($orders as $order) {
             if ($order->shipping()->exists()) {
-                $ordersWithShipping[] = $order; // Add the entire order
+                $ordersWithShipping[] = $order; // Add the entire order with shipping info
             }
         }
 
         return response()->json([
             'message' => 'Danh sách đơn hàng có thông tin shipping.',
             'orders' => $ordersWithShipping
+        ], 200);
+    }
+
+    public function showOrderByTrackingCode($tracking_code, $phone)
+    {
+        $order = Order::where('tracking_code', $tracking_code)
+            ->with(['items.product', 'items.variant', 'shipping'])
+            ->first();
+
+        if (!$order) {
+            return response()->json(['message' => 'Đơn hàng không tồn tại.'], 404);
+        }
+
+        if ($order->shipping && $order->shipping->phone !== $phone) {
+            return response()->json(['message' => 'Số điện thoại không chính xác.'], 400);
+        }
+
+        return response()->json([
+            'message' => 'Đơn hàng đã được lấy thành công.',
+            'order' => $order
         ], 200);
     }
 }

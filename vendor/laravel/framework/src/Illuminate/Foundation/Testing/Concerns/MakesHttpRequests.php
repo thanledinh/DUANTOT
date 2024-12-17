@@ -2,6 +2,7 @@
 
 namespace Illuminate\Foundation\Testing\Concerns;
 
+use BackedEnum;
 use Illuminate\Contracts\Http\Kernel as HttpKernel;
 use Illuminate\Cookie\CookieValuePrefix;
 use Illuminate\Http\Request;
@@ -99,6 +100,21 @@ trait MakesHttpRequests
     public function withoutHeader(string $name)
     {
         unset($this->defaultHeaders[$name]);
+
+        return $this;
+    }
+
+    /**
+     * Remove headers from the request.
+     *
+     * @param  array  $headers
+     * @return $this
+     */
+    public function withoutHeaders(array $headers)
+    {
+        foreach ($headers as $name) {
+            $this->withoutHeader($name);
+        }
 
         return $this;
     }
@@ -316,11 +332,11 @@ trait MakesHttpRequests
     /**
      * Set the referer header and previous URL session value from a given route in order to simulate a previous request.
      *
-     * @param  string  $name
+     * @param  \BackedEnum|string  $name
      * @param  mixed  $parameters
      * @return $this
      */
-    public function fromRoute(string $name, $parameters = [])
+    public function fromRoute(BackedEnum|string $name, $parameters = [])
     {
         return $this->from($this->app['url']->route($name, $parameters));
     }

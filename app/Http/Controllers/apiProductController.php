@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Category;
 use Illuminate\Support\Facades\Cache;
+use App\Models\Brand;
 
 
 
@@ -14,23 +15,40 @@ class apiProductController extends Controller
 {
     public function index(Request $request)
     {
-        $products = Product::with('variants')->get();
+        $products = Product::with('variants')->get()->map(function ($product) {
+            unset($product->description);
+            $product->variants->makeHidden(['cost_price']);
+            return $product;
+        });
+
+        return response()->json($products, 200);
+    }
+    public function showWithoutHidden(Request $request)
+    {
+        $products = Product::with('variants')
+            ->latest()
+            ->get()
+            ->map(function ($product) {
+                return $product;
+            });
+
         return response()->json($products, 200);
     }
 
     public function show($id)
     {
         $product = Product::with('variants')->findOrFail($id);
+        $product->variants->makeHidden(['cost_price']);
         return response()->json($product, 200);
     }
 
     public function store(Request $request)
     {
-        // Validate input
+        // Xác thực đầu vào
         $validatedData = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'type' => 'nullable|string|max:255',
+            'product_type_id' => 'sometimes|required|integer|exists:brands,id',
             'brand_id' => 'sometimes|required|integer|exists:brands,id',
             'category_id' => 'required|integer|exists:categories,id',
             'image' => 'nullable|string', // Đảm bảo trường này là nullable
@@ -43,7 +61,19 @@ class apiProductController extends Controller
             'variants.*.type' => 'nullable|string|max:255',
             'variants.*.image' => 'nullable|string',
             'variants.*.sale' => 'nullable|numeric',
+            'variants.*.cost_price' => 'required_with:variants|numeric',
         ]);
+
+        // Kiểm tra mã vạch có bị trùng hay không
+        if (!empty($validatedData['barcode'])) {
+            $existingProduct = Product::where('barcode', $validatedData['barcode'])->first();
+            if ($existingProduct) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Mã vạch đã tồn tại. Vui lòng sử dụng mã vạch khác.',
+                ], 400);
+            }
+        }
 
         // Xử lý hình ảnh sản phẩm nếu có
         if (isset($validatedData['image'])) {
@@ -70,58 +100,82 @@ class apiProductController extends Controller
 
 
 
+
     public function update(Request $request, $id)
     {
-        // Tìm sản phẩm
-        $product = Product::findOrFail($id);
+        try {
+            // Tìm sản phẩm dựa trên ID
+            $product = Product::findOrFail($id);
 
-        // Validate dữ liệu
-        $validatedData = $request->validate([
-            'name' => 'sometimes|required|string|max:255',
-            'description' => 'sometimes|required|string',
-            'type' => 'sometimes|required|string|max:255',
-            'brand_id' => 'required|integer|exists:brands,id',
-            'category_id' => 'sometimes|required|integer|exists:categories,id',
-            'image' => 'nullable|string',
-            'barcode' => 'nullable|string|max:255',
-            'variants' => 'nullable|array',
-        ]);
+            // Validate dữ liệu từ request
+            $validatedData = $request->validate([
+                'name' => 'sometimes|string|max:255',
+                'description' => 'sometimes|string',
+                'product_type_id' => 'nullable|integer|exists:brands,id',
+                'brand_id' => 'nullable|integer|exists:brands,id', // Allow null
+                'category_id' => 'sometimes|integer|exists:categories,id',
+                'image' => 'nullable|string',
+                'barcode' => 'nullable|string|max:255',
+                'hot' => 'nullable|boolean',
+                'variants' => 'nullable|array',
+                'variants.*.id' => 'nullable|integer|exists:product_variants,id',  // Ensure variant exists
+                'variants.*.price' => 'required_with:variants|numeric',
+                'variants.*.stock_quantity' => 'required_with:variants|integer',
+                'variants.*.size' => 'nullable|string|max:255',
+                'variants.*.flavor' => 'nullable|string|max:255',
+                'variants.*.type' => 'nullable|string|max:255',
+                'variants.*.image' => 'nullable|string',
+                'variants.*.cost_price' => 'required_with:variants|numeric',
+            ]);
 
-        // Xử lý hình ảnh sản phẩm nếu có
-        if (isset($validatedData['image'])) {
-            $validatedData['image'] = $this->handleImageUpload($validatedData['image'], 'product');
-        }
+            // Xử lý hình ảnh sản phẩm nếu có
+            if (isset($validatedData['image'])) {
+                $validatedData['image'] = $this->handleImageUpload($validatedData['image'], 'product');
+            }
 
-        // Cập nhật sản phẩm
-        $product->update($validatedData);
+            // Cập nhật thông tin sản phẩm
+            $product->update($validatedData);
 
-        // Xử lý biến thể nếu có
-        if (!empty($validatedData['variants'])) {
-            foreach ($validatedData['variants'] as $variantData) {
-                $variant = $product->variants()->find($variantData['id'] ?? null);
+            // Xử lý các biến thể nếu có
+            if (!empty($validatedData['variants'])) {
+                foreach ($validatedData['variants'] as $variantData) {
+                    // Tìm biến thể hiện tại (nếu có)
+                    $variant = $product->variants()->find($variantData['id'] ?? null);
 
-                // Nếu biến thể đã tồn tại, kiểm tra và xử lý hình ảnh
-                if ($variant) {
-                    // Nếu không có ảnh mới, giữ lại ảnh cũ
-                    if (!isset($variantData['image'])) {
-                        $variantData['image'] = $variant->image;
+                    if ($variant) {
+                        // Nếu biến thể tồn tại, cập nhật thông tin
+                        if (!isset($variantData['image'])) {
+                            $variantData['image'] = $variant->image;
+                        } else {
+                            // Xử lý ảnh mới cho biến thể
+                            $variantData['image'] = $this->handleImageUpload($variantData['image'], 'variant');
+                        }
+
+                        // Cập nhật biến thể
+                        $variant->update($variantData);
                     } else {
-                        // Nếu có ảnh mới, xử lý và lưu ảnh mới
-                        $variantData['image'] = $this->handleImageUpload($variantData['image'], 'variant');
+                        // Nếu biến thể không tồn tại, tạo mới biến thể
+                        if (isset($variantData['image'])) {
+                            $variantData['image'] = $this->handleImageUpload($variantData['image'], 'variant');
+                        }
+
+                        // Tạo biến thể mới cho sản phẩm
+                        $product->variants()->create($variantData);
                     }
-                    $variant->update($variantData);
-                } else {
-                    // Nếu không tìm thấy biến thể, tạo mới biến thể
-                    if (isset($variantData['image'])) {
-                        $variantData['image'] = $this->handleImageUpload($variantData['image'], 'variant');
-                    }
-                    $product->variants()->create($variantData);
                 }
             }
-        }
 
-        return response()->json($product->load('variants'), 200);
+            // Trả về phản hồi với thông tin sản phẩm đã cập nhật, bao gồm cả các biến thể
+            return response()->json($product->load('variants'), 200);
+
+        } catch (\Exception $e) {
+            // Bắt lỗi và trả về thông báo lỗi chi tiết
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
+
+
+
 
     public function search($query)
     {
@@ -135,10 +189,40 @@ class apiProductController extends Controller
 
     public function delete($id)
     {
-        $product = Product::findOrFail($id);
+        $product = Product::find($id);
+        if (!$product) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Product not found.'
+            ], 404);
+        }
+
+
+        if (!empty($product->image)) {
+            $productImagePath = public_path($product->image);
+            if (file_exists($productImagePath)) {
+                unlink($productImagePath);
+            }
+        }
+
+        foreach ($product->variants as $variant) {
+            if (!empty($variant->image)) {
+                $variantImagePath = public_path($variant->image);
+                if (file_exists($variantImagePath)) {
+                    unlink($variantImagePath);
+                }
+            }
+        }
+
         $product->delete();
-        return response()->json(null, 204);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Product, its variants, and all associated images deleted successfully.'
+        ], 200);
     }
+
+
 
     private function handleImageUpload($imageData, $folder)
     {
@@ -170,11 +254,12 @@ class apiProductController extends Controller
 
     public function products_paginate(Request $request)
     {
-        $pageSize = $request->input('pageSize', 10); // Mặc định là 10 nếu không có tham số
-        $pageNumber = $request->input('pageNumber', 1); // Mặc định là 1 nếu không có tham số
-
-        // Phân trang sản phẩm
-        $products = Product::with('variants')->paginate($pageSize, ['*'], 'page', $pageNumber);
+        // Lấy tất cả sản phẩm cùng với biến thể
+        $products = Product::with('variants')->get()->map(function ($product) {
+            $product->makeHidden(['description']); // Ẩn trường description
+            $product->variants->makeHidden(['cost_price']); // Ẩn trường cost_price của biến thể
+            return $product;
+        });
 
         return response()->json($products);
     }
@@ -211,6 +296,12 @@ class apiProductController extends Controller
             });
         }
 
+        // Ẩn trường description và cost_price
+        $sortedProducts->each(function ($product) {
+            $product->makeHidden(['description']);
+            $product->variants->makeHidden(['cost_price']);
+        });
+
         return response()->json($sortedProducts->values()->all());
     }
 
@@ -221,10 +312,17 @@ class apiProductController extends Controller
         $product = Product::findOrFail($id);
 
         // Lấy các sản phẩm liên quan dựa trên danh mục
-        $relatedProducts = Product::where('category_id', $product->category_id)
+        $relatedProducts = Product::with('variants') // Tải trước biến thể
+            ->where('category_id', $product->category_id)
             ->where('id', '!=', $product->id) // Loại bỏ sản phẩm hiện tại
             ->take(6) // Giới hạn số lượng sản phẩm liên quan
             ->get();
+
+        // Ẩn trường description và cost_price
+        $relatedProducts->each(function ($product) {
+            $product->makeHidden(['description']);
+            $product->variants->makeHidden(['cost_price']);
+        });
 
         return response()->json($relatedProducts);
     }
@@ -235,9 +333,14 @@ class apiProductController extends Controller
         // Lấy 10 sản phẩm mới nhất, có thể thay đổi số lượng theo nhu cầu
         $latestProducts = Product::with('variants') // Eager load variants
             ->orderBy('created_at', 'desc') // Sắp xếp theo thời gian tạo
-            ->take(10)
+            ->take(20)
             ->get()
             ->makeHidden(['description']); // Hide the description field
+
+        // Ẩn trường cost_price cho từng biến thể của mỗi sản phẩm
+        $latestProducts->each(function ($product) {
+            $product->variants->makeHidden(['cost_price']);
+        });
 
         return response()->json($latestProducts);
     }
@@ -250,34 +353,33 @@ class apiProductController extends Controller
                 ->select('id', 'name', 'hot', 'image')
                 ->where('hot', 1)
                 ->orderBy('created_at', 'desc')
-                ->take(10)
                 ->get();
         });
-    
+
         return response()->json($hotProducts);
     }
     public function removeMultipleHotStatus(Request $request)
     {
         // Lấy danh sách ID từ query string (hot-status=3,4,5)
         $productIds = explode(',', $request->query('hot-status'));
-    
+
         // Tìm các sản phẩm có ID trong danh sách
         $products = Product::whereIn('id', $productIds)->get();
-    
+
         if ($products->isEmpty()) {
             return response()->json(['message' => 'No products found for the given IDs'], 404);
         }
-    
+
         // Cập nhật trạng thái hot = 0 cho tất cả các sản phẩm tìm thấy
         foreach ($products as $product) {
             $product->hot = 0; // Cập nhật trạng thái hot thành 0 (gỡ bỏ)
             $product->save(); // Lưu thay đổi
         }
-    
+
         return response()->json(['message' => 'Hot status removed successfully', 'products' => $products]);
     }
-    
-    
+
+
 
     public function updateMultipleHotStatus(Request $request)
     {
@@ -304,30 +406,16 @@ class apiProductController extends Controller
     public function getBestSellingProducts(Request $request)
     {
 
-        $bestSellingProducts = Product::withCount('orderItems') // Đếm số lượng đơn hàng cho mỗi sản phẩm
+        $bestSellingProducts = Product::with('variants')->withCount('orderItems') // Đếm số lượng đơn hàng cho mỗi sản phẩm
             ->orderBy('order_items_count', 'desc') // Sắp xếp theo số lượng đơn hàng
-            ->take(10)
+            ->take(12)
             ->get();
 
         return response()->json($bestSellingProducts);
     }
 
-    // hiển thị sản phẩm theo danh mục
-    public function getProductsCategoryUrl($categoryUrl, Request $request) // Added Request $request parameter
-    {
-        // Tìm category dựa trên URL
-        $category = Category::where('url', $categoryUrl)->firstOrFail();
-
-        // Lấy tất cả sản phẩm thuộc về category với id = $category->id
-        $products = Product::with('variants')
-            ->where('category_id', $category->id) // Changed to use category_id from the found category
-            ->get();
-
-        return response()->json($products, 200);
-    }
-
-    // hiển thị sản phẩm theo danh mục
-    public function getProductsByCategoryUrl($categoryUrl, Request $request) // Added Request $request parameter
+    // hiển th sản phẩm theo danh mc
+    public function getProductsByCategoryUrl($categoryUrl, Request $request)
     {
         // Tìm category dựa trên URL
         $category = Category::where('url', $categoryUrl)->firstOrFail();
@@ -335,13 +423,18 @@ class apiProductController extends Controller
         // Lấy tất cả subcategories của category với id = $category->id
         $subcategories = Category::where('parent_id', $category->id)->pluck('id');
 
-        // Lấy tất cả sản phẩm thuộc về các subcategories với phân trang
-        $pageSize = $request->input('pageSize', 10); // Mặc định là 10 nếu không có tham số
-        $pageNumber = $request->input('pageNumber', 1); // Mặc định là 1 nếu không có tham số
-
-        $products = Product::with('variants')
-            ->whereIn('category_id', $subcategories)
-            ->paginate($pageSize, ['*'], 'page', $pageNumber); // Added pagination
+        // Lấy tất cả sản phẩm thuộc về category hoặc subcategories
+        if ($subcategories->isNotEmpty()) {
+            // Nếu có subcategories, lấy sản phẩm từ subcategories
+            $products = Product::with('variants')
+                ->whereIn('category_id', $subcategories)
+                ->get();
+        } else {
+            // Nếu không có subcategories, lấy sản phẩm từ category hiện tại
+            $products = Product::with('variants')
+                ->where('category_id', $category->id)
+                ->get();
+        }
 
         return response()->json($products, 200);
     }
@@ -358,4 +451,44 @@ class apiProductController extends Controller
         ], 200);
     }
 
+    // lấy sản phẩm theo brand name
+    public function getProductsByBrand($brandNames, Request $request)
+    {
+        // Tách danh sách tên thương hiệu thành mảng
+        $brandNamesArray = explode(',', $brandNames);
+
+        // Tìm tất cả các thương hiệu dựa trên tên
+        $brands = Brand::whereIn('name', $brandNamesArray)->get();
+
+        // Lấy tất cả các ID của thương hiệu
+        $brandIds = $brands->pluck('id');
+
+        // Lấy sản phẩm theo danh sách brand_id
+        $products = Product::with('variants')->whereIn('brand_id', $brandIds)->get();
+
+        return response()->json($products);
+    }
+
+    // sản phẩm liên quan
+    public function getRelatedProducts($id)
+    {
+        // Lấy sản phẩm hiện tại
+        $product = Product::findOrFail($id);
+
+        // Lấy các sản phẩm liên quan dựa trên danh mục và sắp xếp ngẫu nhiên, bao gồm cả biến thể
+        $relatedProducts = Product::with('variants') // Tải trước biến thể
+            ->where('category_id', $product->category_id)
+            ->where('id', '!=', $product->id) // Loại bỏ sản phẩm hiện tại
+            ->inRandomOrder() // Sắp xếp ngẫu nhiên
+            ->take(6) // Giới hạn số lượng sản phẩm liên quan
+            ->get()
+            ->makeHidden(['description']); // Ẩn trường description
+
+        return response()->json($relatedProducts);
+    }
+
 }
+
+
+
+

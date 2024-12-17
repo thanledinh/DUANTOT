@@ -23,10 +23,10 @@ class VNPayController extends Controller
         $vnp_Amount = $order->total_price * 100; // Số tiền (đơn vị VNĐ, nhân 100 để tính theo VNPAY)
 
         // Thông tin VNPAY
-        $vnp_TmnCode = env('VNPAY_TMN_CODE'); // Mã website tại VNPAY
-        $vnp_HashSecret = env('VNPAY_HASH_SECRET'); // Chuỗi bí mật
-        $vnp_Url = env('VNPAY_URL'); // URL thanh toán VNPAY
-        $vnp_Returnurl = env('VNPAY_RETURN_URL'); // URL phản hồi sau thanh toán
+        $vnp_TmnCode = 'FOTS7Y02'; // Mã website tại VNPAY
+        $vnp_HashSecret = 'GZ7MH82IROI43JZSPSSEOXEPLY5ZCPYP'; // Chuỗi bí mật
+        $vnp_Url = 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html'; // URL thanh toán VNPAY
+        $vnp_Returnurl = 'http://localhost:5173/payment-return'; // URL phản hồi sau thanh toán
 
         $vnp_TxnRef = $order->id; // Mã đơn hàng
         $vnp_OrderInfo = 'Thanh toan don hang ' . $vnp_TxnRef;
@@ -87,7 +87,6 @@ class VNPayController extends Controller
         // Trả về URL thanh toán
         return response()->json($vnp_Url); // Trả về URL thanh toán
     }
-
 
     public function paymentReturn(Request $request)
     {

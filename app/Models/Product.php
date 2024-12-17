@@ -9,7 +9,8 @@ class Product extends Model
 {
     use HasFactory;
     
-    protected $fillable = ['name', 'description', 'type', 'brand_id', 'category_id', 'image', 'barcode', 'hot'];
+    protected $fillable = ['name', 'description', 'product_type_id', 'brand_id', 'category_id', 'image', 'barcode', 'hot', 'sale'];
+    
 
     public function variants()
     {
@@ -29,5 +30,13 @@ class Product extends Model
     {
         return $this->hasMany(Wishlist::class);
     }
+    public function brand()
+    {
+        return $this->belongsTo(Brand::class, 'brand_id');
+    }
 
+    public function reviews()
+    {
+        return $this->hasMany(ProductReview::class);
+    }
 }

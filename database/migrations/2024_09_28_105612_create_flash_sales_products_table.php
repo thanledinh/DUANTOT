@@ -12,8 +12,7 @@ class CreateFlashSalesProductsTable extends Migration
             $table->id(); 
             $table->unsignedBigInteger('flash_sale_id'); 
             $table->unsignedBigInteger('product_id'); 
-            $table->decimal('discount_price', 10, 2); 
-            $table->decimal('original_price', 10, 2); 
+            $table->integer('discount_percentage')->nullable(); 
             $table->integer('quantity_limit_per_customer')->nullable(); 
             $table->integer('stock_quantity'); 
             $table->timestamps(); 
