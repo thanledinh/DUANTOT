@@ -110,12 +110,21 @@ class apiCategoryController extends Controller
     public function destroy($id)
     {
         $category = Category::find($id);
+
         if (!$category) {
             return response()->json(['message' => 'Category not found'], 404);
         }
+        if (!empty($category->image)) {
+            $categoryImagePath = public_path($category->image);
+            if (file_exists($categoryImagePath)) {
+                unlink($categoryImagePath);
+            }
+        }
         $category->delete();
+
         return response()->json(['message' => 'Category deleted successfully']);
     }
+
 
     // Hàm xử lý upload hình ảnh
     private function handleImageUpload($imageData, $type)
@@ -129,16 +138,16 @@ class apiCategoryController extends Controller
     public function getSubcategories()
     {
         $subcategories = Category::whereNotNull('parent_id')
-        ->orderBy('created_at', 'desc')
-        ->get();
+            ->orderBy('created_at', 'desc')
+            ->get();
         return response()->json($subcategories);
     }
     // Lấy danh sách tất cả các categories không có parent_id
     public function getParentCategories()
     {
         $parentCategories = Category::whereNull('parent_id')
-        ->orderBy('created_at', 'desc')
-        ->get();
+            ->orderBy('created_at', 'desc')
+            ->get();
         return response()->json($parentCategories);
     }
 

@@ -133,14 +133,24 @@ class apiProductVariantController extends Controller
 
     public function delete($id)
     {
-        $product = ProductVariant::find($id);
+        $variant = ProductVariant::find($id);
 
-        if (!$product) {
-            return response()->json(['message' => 'Variant không tồn tài'], 404);
+        if (!$variant) {
+            return response()->json(['message' => 'Variant không tồn tại'], 404);
         }
-        $product->delete();
-        return response()->json(['message' => 'Xoá Variant thành công'], 204);
+
+        if (!empty($variant->image)) {
+            $imagePath = public_path($variant->image);
+            if (file_exists($imagePath)) {
+                unlink($imagePath); 
+            }
+        }
+
+        $variant->delete();
+
+        return response()->json(['message' => 'Xoá Variant thành công'], 200);
     }
+
     private function handleImageUpload($imageData)
     {
         list($type, $imageData) = explode(';', $imageData);
