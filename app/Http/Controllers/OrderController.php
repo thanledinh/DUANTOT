@@ -50,6 +50,20 @@ class OrderController extends Controller
         ]);
     
         try {
+            // 1. Kiểm tra lịch sử bom hàng của khách hàng
+            $bombOrderCount = Order::where('status', 'canceled')
+            ->whereHas('shipping', function ($query) use ($request) {
+            $query->where('phone', $request->phone)
+            ->orWhere('email', $request->email);
+            })
+            ->count();
+
+            if ($bombOrderCount >= 3 && $request->payment_method == 'cash') {
+            return response()->json([
+            'message' => 'Bạn đã có hơn 3 đơn hàng bị hủy. Vui lòng thanh toán trước để tiếp tục đặt hàng.'
+            ], 400);
+            }
+            
             $items = $request->items;
             $productIds = array_column($items, 'product_id');
             $variantIds = array_column($items, 'variant_id');
@@ -63,7 +77,12 @@ class OrderController extends Controller
             foreach ($items as $item) {
                 $product = $products[$item['product_id']] ?? null;
                 $variant = $variants[$item['variant_id']] ?? null;
-            
+                
+                if (!$product || !$variant || $variant->stock_quantity < $item['quantity']) {
+                return response()->json([
+                    'message' => 'Số lượng tồn kho không đủ cho sản phẩm ' . ($product->name ?? '')
+                ], 400);
+                }
                 if (!$product || !$variant) {
                     return response()->json(['message' => 'Sản phẩm hoặc biến thể không hợp lệ.'], 400);
                 }
@@ -99,6 +118,11 @@ class OrderController extends Controller
             
                 // Cập nhật lại giá trị cuối cùng cho `price` và `sale` của mỗi `OrderItem`
                 $total_price += $final_price * $item['quantity'];
+
+                  // Trừ tồn kho
+                 $variant->stock_quantity -= $item['quantity'];
+                 $variant->save();
+                 $deductedStock[] = ['variant' => $variant, 'quantity' => $item['quantity']]; // Lưu lại tồn kho đã trừ
             }
             
     
@@ -156,9 +180,10 @@ class OrderController extends Controller
                     'sale' => $products[$item['product_id']]->sale,
                 ]);
             }
-             if ($request->has('cancel_order') && $request->cancel_order) {
-            $order->update(['status' => 'canceled']);
-            return response()->json(['message' => 'Đơn hàng đã bị hủy.', 'order' => $order], 200);
+            if ($request->has('cancel_order') && $request->cancel_order) {
+                $this->restoreStock($order); // Khôi phục tồn kho
+                $order->update(['status' => 'canceled']);
+                return response()->json(['message' => 'Đơn hàng đã bị hủy.', 'order' => $order], 200);
             }
             return response()->json(['message' => 'Đơn hàng đã được tạo thành công.', 'order' => $order], 201);
     
@@ -187,7 +212,7 @@ class OrderController extends Controller
         }
         $order = Order::where('user_id', $user->id)->find($id);
         if (!$order) {
-            return response()->json(['message' => 'Đơn hàng không tồn tại hoặc không thuộc về người dng.'], 404);
+            return response()->json(['message' => 'Đơn hàng không tồn tại hoặc không thuộc về người dùng.'], 404);
         }
         if ($order->status == 'processed' || $order->status == 'completed') {
             return response()->json(['message' => 'Không thể thay đổi trạng thái của đơn hàng đã được xử lý hoặc hoàn thành.'], 403);
@@ -387,4 +412,14 @@ class OrderController extends Controller
             'order' => $order
         ], 200);
     }
+    private function restoreStock($order)
+{
+    foreach ($order->items as $item) {
+        $variant = ProductVariant::find($item->variant_id);
+        if ($variant) {
+            $variant->stock_quantity += $item->quantity;
+            $variant->save();
+        }
+    }
+}
 }
