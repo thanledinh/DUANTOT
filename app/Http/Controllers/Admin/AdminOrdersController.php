@@ -68,7 +68,8 @@ class AdminOrdersController extends Controller
             'Tiếp nhận' => 1,
             'Đang vận chuyển' => 2,
             'Đã giao hàng' => 3,
-            'Đã hủy' => 4
+            'Đã hủy' => 4,
+            'Giao hàng không thành công' => 5
         ];
 
         // Xác thực yêu cầu
@@ -98,7 +99,8 @@ class AdminOrdersController extends Controller
                 // Kiểm tra trường hợp không hợp lệ giữa "Đã giao hàng" và "Đã hủy"
                 if (
                     ($order->status === 'Đã giao hàng' && $request->status === 'Đã hủy') ||
-                    ($order->status === 'Đã hủy' && $request->status === 'Đã giao hàng')
+                    ($order->status === 'Đã hủy' && $request->status === 'Đã giao hàng') ||
+                    ($order->status === 'Giao hàng không thành công' && $request->status === 'Đã hủy')
                 ) {
                     return response()->json([
                         'message' => 'Không thể cập nhật từ "Đã giao hàng" lên "Đã hủy" hoặc từ "Đã hủy" lên "Đã giao hàng".',
@@ -150,7 +152,7 @@ class AdminOrdersController extends Controller
                 }
 
                 // Kiểm tra xem có nhảy bậc không
-                if (($currentStatusIndex === 0 || $currentStatusIndex === 1 || $currentStatusIndex === 2) && $newStatusIndex === 4) {
+                if ((($currentStatusIndex === 0 || $currentStatusIndex === 1) && $newStatusIndex === 4) || (($currentStatusIndex === 2 ) && $newStatusIndex === 5)) {
                     $order->status = $request->status;
                     $order->save();
 
