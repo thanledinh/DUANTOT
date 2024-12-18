@@ -120,6 +120,13 @@ class BlogController extends Controller
             return response()->json(['message' => 'Blog not found'], 404);
         }
 
+        if (!empty($blog->image_url)) {
+            $blogImagePath = public_path( $blog->image_url);
+            if (file_exists($blogImagePath)) {
+                unlink($blogImagePath);
+            }
+        }
+        
         $blog->delete();
 
         return response()->json(['message' => 'Blog deleted successfully'], 200);

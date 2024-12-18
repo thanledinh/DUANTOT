@@ -65,6 +65,15 @@ class apiBrandController extends Controller
     public function destroy($id)
     {
         $brand = Brand::findOrFail($id);
+        if (!$brand) {
+            return response()->json(['message' => 'Brand not found'], 404);
+        }
+        if (!empty($brand->image)) {
+            $brandImagePath = public_path($brand->image);
+            if (file_exists($brandImagePath)) {
+                unlink($brandImagePath);
+            }
+        }
         $brand->delete();
 
         return response()->json(['message' => 'Brand deleted successfully'], 200);
