@@ -7,6 +7,7 @@ use App\Models\FlashSaleProduct;
 use Illuminate\Http\Request;
 use App\Models\Product;
 use Carbon\Carbon;
+use DateTime;
 use Illuminate\Support\Facades\Log;
 
 class FlashSaleController extends Controller
@@ -51,22 +52,22 @@ class FlashSaleController extends Controller
         return response()->json(['message' => 'Expired flash sales processed successfully.']);
     }
 
- 
 
- 
+
+
 
     public function getFlashSalesByTimeRange(Request $request)
     {
-        $now = Carbon::now();  
+        $now = Carbon::now();
         Log::info("Current time: " . $now);
-    
-       
+
+
         $flashSales = FlashSale::where('status', '1')  // Kiểm tra flash sale đang hoạt động
             ->where('start_time', '<=', $now)           // Flash sale bắt đầu trước hoặc bằng thời gian hiện tại
             ->where('end_time', '>=', $now)             // Flash sale kết thúc sau hoặc bằng thời gian hiện tại
             ->with(['flashSaleProducts.product'])       // Eager load các sản phẩm thuộc flash sale
             ->get();
-    
+
         // Kiểm tra nếu không có Flash Sales nào
         if ($flashSales->isEmpty()) {
             return response()->json([
@@ -75,18 +76,18 @@ class FlashSaleController extends Controller
                 'current_time' => now()->toDateTimeString(),
             ], 404);
         }
-    
+
         // Chuẩn bị danh sách Flash Sales và sản phẩm
         $flashSalesData = $flashSales->map(function ($flashSale) {
             $products = $flashSale->flashSaleProducts->map(function ($flashSaleProduct) {
                 $product = $flashSaleProduct->product;
-    
+
                 // Kiểm tra và cập nhật giá sale của sản phẩm nếu cần
                 if ($flashSaleProduct->discount_percentage != $product->sale) {
                     $product->sale = $flashSaleProduct->discount_percentage;
                     $product->save();
                 }
-    
+
                 return [
                     'id' => $product->id,
                     'name' => $product->name,
@@ -107,12 +108,12 @@ class FlashSaleController extends Controller
                 'products' => $products,
             ];
         });
-    
+
         return response()->json([
             'status' => 'success',
         ], 200);
     }
-    
+
 
 
 
@@ -148,10 +149,19 @@ class FlashSaleController extends Controller
         // Xác thực dữ liệu
         $validated = $request->validate([
             'start_time' => 'required|date',
-            'end_time' => 'nullable|date|after:start_time',
+            'end_time' => 'nullable|date',
             'max_discount' => 'nullable|numeric|min:0',
             'status' => 'required|boolean',
         ]);
+
+        // Kiểm tra start_time không được sau end_time nếu cả hai được cung cấp
+        if (!empty($validated['start_time']) && !empty($validated['end_time'])) {
+            if (new DateTime($validated['start_time']) > new DateTime($validated['end_time'])) {
+                return response()->json([
+                    'message' => 'Thời gian bắt đầu không được sau thời gian kết thúc.'
+                ], 422);
+            }
+        }
 
         try {
             // Tạo Flash Sale
@@ -164,7 +174,7 @@ class FlashSaleController extends Controller
             ], 201);
         } catch (\Exception $e) {
             // Log lỗi để dễ dàng kiểm tra
-            // \Log::error($e->getMessage());
+            \Log::error($e->getMessage());
 
             return response()->json([
                 'message' => 'Có lỗi xảy ra khi tạo Flash Sale.',
@@ -256,8 +266,9 @@ class FlashSaleController extends Controller
             return response()->json(['message' => 'Ngày không hợp lệ.'], 400);
         }
 
-        // Lấy flash sale theo ngày
-        $flashSales = FlashSale::whereDate('start_time', '<=', $date)
+        // Lấy flash sale theo ngày với trạng thái = 1
+        $flashSales = FlashSale::where('status', 1) // Chỉ lấy flash sale có trạng thái hoạt động
+            ->whereDate('start_time', '<=', $date)
             ->whereDate('end_time', '>=', $date)
             ->get();
 
@@ -274,6 +285,7 @@ class FlashSaleController extends Controller
             'data' => $flashSalesData
         ], 200);
     }
+
 
 
 

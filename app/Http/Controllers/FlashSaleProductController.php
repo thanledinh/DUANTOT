@@ -11,7 +11,7 @@ use Carbon\Carbon;
 
 class FlashSaleProductController extends Controller
 {
- 
+
     public function addProductToFlashSale(Request $request)
     {
         $validatedData = $request->validate([
@@ -21,33 +21,33 @@ class FlashSaleProductController extends Controller
             'quantity_limit_per_customer' => 'nullable|integer|min:1',
             'stock_quantity' => 'required|integer|min:0',
         ]);
-    
+
         try {
             // Lấy Flash Sale và kiểm tra thời gian
             $flashSale = FlashSale::find($request->flash_sale_id);
             if (!$flashSale) {
                 return response()->json(['message' => 'Flash Sale không tồn tại.'], 404);
             }
-    
+
             // Lấy sản phẩm
             $product = Product::find($request->product_id);
             if (!$product) {
                 return response()->json(['message' => 'Sản phẩm không tồn tại.'], 404);
             }
-    
+
             // Lấy tất cả các biến thể của sản phẩm
             $productVariants = $product->variants; // Giả sử bạn có mối quan hệ 'variants'
-    
+
             // Tính tổng số lượng của tất cả các biến thể
             $totalStockQuantity = $productVariants->sum('stock_quantity');
-    
+
             // Kiểm tra tổng số lượng sản phẩm còn đủ không
             if ($totalStockQuantity < $request->stock_quantity) {
                 return response()->json([
                     'message' => 'Tổng số lượng sản phẩm không đủ để thêm vào Flash Sale.'
                 ], 400);
             }
-    
+
             // Lưu thông tin Flash Sale
             FlashSaleProduct::create([
                 'flash_sale_id' => $request->flash_sale_id,
@@ -56,14 +56,14 @@ class FlashSaleProductController extends Controller
                 'quantity_limit_per_customer' => $request->quantity_limit_per_customer,
                 'stock_quantity' => $request->stock_quantity,
             ]);
-    
+
             // Chỉ cập nhật giảm giá nếu Flash Sale đã bắt đầu
             if (Carbon::now()->greaterThanOrEqualTo($flashSale->start_time)) {
                 $product->update([
                     'sale' => $request->discount_percentage,
                 ]);
             }
-    
+
             return response()->json([
                 'message' => 'Sản phẩm đã được thêm vào Flash Sale thành công.',
                 'data' => [
@@ -76,14 +76,14 @@ class FlashSaleProductController extends Controller
             ], 201);
         } catch (\Exception $e) {
             // \Log::error('Lỗi khi thêm sản phẩm vào Flash Sale: ' . $e->getMessage());
-    
+
             return response()->json([
                 'message' => 'Có lỗi xảy ra khi thêm sản phẩm.',
                 'error' => $e->getMessage()
             ], 500);
         }
     }
-    
+
 
 
 
@@ -160,6 +160,15 @@ class FlashSaleProductController extends Controller
 
         if (!$flashSale) {
             return response()->json(['message' => 'Flash Sale không tồn tại.'], 404);
+        }
+
+        // Nếu status của Flash Sale là 0, cập nhật sale của tất cả sản phẩm liên quan về 0
+        if ($flashSale->status == 0) {
+            $flashSale->products->each(function ($flashSaleProduct) {
+                $product = $flashSaleProduct->product;
+                $product->sale = 0; // Cập nhật giá trị sale
+                $product->save();   // Lưu lại sản phẩm
+            });
         }
 
         // Ẩn trường description và cost_price
