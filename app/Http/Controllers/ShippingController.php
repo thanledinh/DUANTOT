@@ -19,34 +19,67 @@ class ShippingController extends Controller
      */
     public function store(Request $request, $order_id)
     {
-        $request->validate([
-            'full_name' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
-            'shipping_address' => 'required|string|max:255',
-            'city' => 'required|string|max:255',
-            'district' => 'required|string|max:255',
-            'phone' => 'required|string|max:15',
-            'ward' => 'required|string|max:255',
-            'shipping_method' => 'required|string',
-        ]);
-
+        $errors = [];
+    
+        // Kiểm tra từng trường bắt buộc
+        if (!$request->filled('full_name')) {
+            $errors['full_name'] = 'Họ và tên là bắt buộc.';
+        }
+    
+        if (!$request->filled('email') || !filter_var($request->email, FILTER_VALIDATE_EMAIL)) {
+            $errors['email'] = 'Email không hợp lệ. Vui lòng nhập đúng định dạng email.';
+        }
+    
+        if (!$request->filled('shipping_address')) {
+            $errors['shipping_address'] = 'Địa chỉ giao hàng là bắt buộc.';
+        }
+    
+        if (!$request->filled('city')) {
+            $errors['city'] = 'Thành phố là bắt buộc.';
+        }
+    
+        if (!$request->filled('district')) {
+            $errors['district'] = 'Quận/Huyện là bắt buộc.';
+        }
+    
+        if (!$request->filled('ward')) {
+            $errors['ward'] = 'Phường/Xã là bắt buộc.';
+        }
+    
+        if (!$request->filled('phone') || !preg_match('/^(\+84|0)[3-9][0-9]{8}$/', $request->phone)) {
+            $errors['phone'] = 'Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại đúng định dạng của Việt Nam.';
+        }
+    
+        if (!$request->filled('shipping_method')) {
+            $errors['shipping_method'] = 'Phương thức giao hàng là bắt buộc.';
+        }
+    
+        // Nếu có lỗi, trả về danh sách lỗi
+        if (!empty($errors)) {
+            return response()->json([
+                'message' => 'Dữ liệu không hợp lệ.',
+                'errors' => $errors
+            ], 400);
+        }
+    
+        // Tiếp tục xử lý khi không có lỗi
         DB::beginTransaction();
         try {
-            // Find the order
+            // Tìm đơn hàng
             $order = Order::find($order_id);
             if (!$order) {
                 return response()->json(['message' => 'Đơn hàng không tồn tại.'], 404);
             }
-
-            // Check if shipping already exists
+    
+            // Kiểm tra xem thông tin vận chuyển đã tồn tại hay chưa
             if ($order->shipping) {
                 return response()->json(['message' => 'Thông tin vận chuyển đã tồn tại cho đơn hàng này.'], 400);
             }
-
-            // Calculate shipping cost
+    
+            // Tính phí vận chuyển
             $shipping_cost = $this->calculateShippingCost($order);
-
-            // Save shipping information
+    
+            // Lưu thông tin vận chuyển
             $shipping = new Shipping();
             $shipping->order_id = $order->id;
             $shipping->full_name = $request->full_name;
@@ -54,24 +87,24 @@ class ShippingController extends Controller
             $shipping->shipping_address = $request->shipping_address;
             $shipping->city = $request->city;
             $shipping->district = $request->district;
+            $shipping->ward = $request->ward;
             $shipping->phone = $request->phone;
             $shipping->shipping_method = $request->shipping_method;
-            $shipping->ward = $request->ward;
             $shipping->shipping_cost = $shipping_cost;
             $shipping->shipping_status = 'pending';
             $shipping->save();
-
-            // Deduct stock quantities
+    
+            // Trừ tồn kho
             $this->deductStock($order);
-
-            // Update order status
+    
+            // Cập nhật trạng thái đơn hàng
             $order->update(['status' => 'processing']);
-
+    
             DB::commit();
-
+    
             // Gửi email xác nhận vận chuyển
             Mail::to($shipping->email)->send(new ShippingConfirmation($shipping, $order));
-
+    
             return response()->json([
                 'message' => 'Thông tin vận chuyển đã được thêm thành công.',
                 'shipping' => $shipping
@@ -81,7 +114,8 @@ class ShippingController extends Controller
             return response()->json(['message' => 'Đã có lỗi xảy ra: ' . $e->getMessage()], 500);
         }
     }
-
+    
+    
     /**
      * Show shipping information for an order.
      */

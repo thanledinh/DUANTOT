@@ -64,10 +64,10 @@ class OrderController extends Controller
             ], 400);
             }
             
-            $items = $request->items;
-            $productIds = array_column($items, 'product_id');
-            $variantIds = array_column($items, 'variant_id');
-    
+                $items = $request->items;
+                $productIds = array_column($items, 'product_id');
+                $variantIds = array_column($items, 'variant_id');
+        
             // Lấy thông tin sản phẩm và biến thể
             $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
             $variants = ProductVariant::whereIn('id', $variantIds)->get()->keyBy('id');
