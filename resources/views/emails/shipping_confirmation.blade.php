@@ -130,6 +130,8 @@
     <div class="container">
         <h1>Xác nhận vận chuyển</h1>
         <p>Xin chào <span class="highlight">{{ $shipping->full_name }}</span>,</p>
+        <p>Mã đơn hàng của bạn là: {{ $order->tracking_code }}</p>
+
         <p>Cảm ơn bạn đã đặt hàng tại cửa hàng của chúng tôi. Dưới đây là thông tin vận chuyển của bạn:</p>
 
         <div class="order-details">
@@ -155,6 +157,8 @@
                 <td>{{ $order->order_date }}</td>
                 <td>{{ number_format($order->total_price, 0, ',', '.') }} VNĐ</td>
                 <td>{{ $order->status }}</td>
+                <p>Mã đơn hàng của bạn là: {{ $order->tracking_code }}</p>
+
                 <td>{{ $order->payment_method }}</td>
             </tr>
         </table>

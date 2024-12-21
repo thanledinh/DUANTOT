@@ -68,8 +68,9 @@ class AdminOrdersController extends Controller
             'Tiếp nhận' => 1,
             'Đang vận chuyển' => 2,
             'Đã giao hàng' => 3,
-            'Đã hủy' => 4,
-            'Giao hàng không thành công' => 5
+            'Yêu cầu hủy' => 4,
+            'Đã hủy' => 5,
+            'Giao hàng không thành công' => 6
         ];
 
         // Xác thực yêu cầu
@@ -98,8 +99,8 @@ class AdminOrdersController extends Controller
 
                 // Kiểm tra trường hợp không hợp lệ giữa "Đã giao hàng" và "Đã hủy"
                 if (
-                    ($order->status === 'Đã giao hàng' && $request->status === 'Đã hủy') ||
-                    ($order->status === 'Đã hủy' && $request->status === 'Đã giao hàng') ||
+                    ($order->status === 'Đã giao hàng' && $request->status === 'Yêu cầu hủy') ||
+                    ($order->status === 'Đã hủy' && $request->status === 'Giao hàng không thành công') ||
                     ($order->status === 'Giao hàng không thành công' && $request->status === 'Đã hủy')
                 ) {
                     return response()->json([
@@ -121,16 +122,7 @@ class AdminOrdersController extends Controller
                         ], 400);
                     }
 
-                    // Trường hợp đặc biệt: trạng thái hiện tại là 4, cho phép quay về 0 hoặc 1
-                    if ($currentStatusIndex === 4 && in_array($newStatusIndex, [0, 1])) {
-                        $order->status = $request->status;
-                        $order->save();
-                        return response()->json([
-                            'message' => 'Trạng thái của đơn hàng đã được cập nhật thành công.',
-                            'order_id' => $order->id,
-                            'new_status' => $order->status
-                        ], 200);
-                    }
+               
 
                     // Cho phép lùi lại đúng 1 bậc trạng thái
                     if ($currentStatusIndex - 1 === $newStatusIndex) {
@@ -152,13 +144,9 @@ class AdminOrdersController extends Controller
                 }
 
                 // Kiểm tra xem có nhảy bậc không
-                if ((($currentStatusIndex === 0 || $currentStatusIndex === 1) && $newStatusIndex === 4) || (($currentStatusIndex === 2 ) && $newStatusIndex === 5)) {
+                if ((($currentStatusIndex === 0 || $currentStatusIndex === 1) && $newStatusIndex === 4) || (($currentStatusIndex === 2 ) && $newStatusIndex === 6)) {
                     $order->status = $request->status;
                     $order->save();
-
-                    // Gửi email thông báo sau khi cập nhật
-                    Mail::to($shippingEmail)->send(new OrderStatusUpdated($order, $shipping));
-
                     return response()->json([
                         'message' => 'Trạng thái của đơn hàng đã được cập nhật thành công.',
                         'order_id' => $order->id,
@@ -179,10 +167,11 @@ class AdminOrdersController extends Controller
             // Cập nhật trạng thái mới
             $order->status = $request->status;
             $order->save();
-
-            // Gửi email thông báo sau khi cập nhật
-            Mail::to($shippingEmail)->send(new OrderStatusUpdated($order, $shipping));
-
+            if ((($order->status  === 2 || $order->status === 3) )) {
+                Mail::to($shippingEmail)->send(new OrderStatusUpdated($order, $shipping));
+                
+            }
+          
             return response()->json([
                 'message' => 'Trạng thái của đơn hàng đã được cập nhật thành công.',
                 'order_id' => $order->id,

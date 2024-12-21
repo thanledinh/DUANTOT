@@ -138,7 +138,7 @@ class FlashSaleController extends Controller
     // mã show flash sale kèm theo flash sale product
     public function showFlashSaleWithProducts($id)
     {
-        $flashSale = FlashSale::with('products')->find($id);
+        $flashSale = FlashSale::with(['products.product'])->find($id);
         return response()->json([
             'data' => $flashSale
         ], 200);
@@ -149,24 +149,30 @@ class FlashSaleController extends Controller
         // Xác thực dữ liệu
         $validated = $request->validate([
             'start_time' => 'required|date',
-            'end_time' => 'nullable|date',
+            'end_time' => 'required|date|after:start_time', // Thời gian kết thúc phải sau thời gian bắt đầu
             'max_discount' => 'nullable|numeric|min:0',
             'status' => 'required|boolean',
         ]);
-
-        // Kiểm tra start_time không được sau end_time nếu cả hai được cung cấp
-        if (!empty($validated['start_time']) && !empty($validated['end_time'])) {
-            if (new DateTime($validated['start_time']) > new DateTime($validated['end_time'])) {
-                return response()->json([
-                    'message' => 'Thời gian bắt đầu không được sau thời gian kết thúc.'
-                ], 422);
-            }
+    
+        $overlappingFlashSales = FlashSale::where(function ($query) use ($validated) {
+            $query->whereBetween('start_time', [$validated['start_time'], $validated['end_time']])
+                ->orWhereBetween('end_time', [$validated['start_time'], $validated['end_time']])
+                ->orWhere(function ($query) use ($validated) {
+                    $query->where('start_time', '<=', $validated['start_time'])
+                          ->where('end_time', '>=', $validated['end_time']);
+                });
+        })->exists();
+    
+        if ($overlappingFlashSales) {
+            return response()->json([
+                'message' => 'Flash Sale đã tồn tại trong khoảng thời gian này. Vui lòng chọn thời gian khác.'
+            ], 422);
         }
-
+    
         try {
             // Tạo Flash Sale
             $flashSale = FlashSale::create($validated);
-
+    
             // Trả về JSON thành công
             return response()->json([
                 'message' => 'Flash Sale created successfully.',
@@ -175,7 +181,7 @@ class FlashSaleController extends Controller
         } catch (\Exception $e) {
             // Log lỗi để dễ dàng kiểm tra
             \Log::error($e->getMessage());
-
+    
             return response()->json([
                 'message' => 'Có lỗi xảy ra khi tạo Flash Sale.',
                 'error' => $e->getMessage()
@@ -255,36 +261,45 @@ class FlashSaleController extends Controller
             ], 500);
         }
     }
-
-    // show flash sale theo ngày
     public function showFlashSaleByDate(Request $request)
     {
-        $date = $request->input('date'); // Lấy ngày từ request
-
+        // Lấy ngày từ request hoặc sử dụng ngày hiện tại
+        $date = $request->input('date', now()->toDateString()); // Nếu không có 'date', dùng ngày hiện tại
+    
         // Kiểm tra xem ngày có hợp lệ không
-        if (!$date || !strtotime($date)) {
+        if (!strtotime($date)) {
             return response()->json(['message' => 'Ngày không hợp lệ.'], 400);
         }
-
+    
         // Lấy flash sale theo ngày với trạng thái = 1
         $flashSales = FlashSale::where('status', 1) // Chỉ lấy flash sale có trạng thái hoạt động
             ->whereDate('start_time', '<=', $date)
             ->whereDate('end_time', '>=', $date)
             ->get();
-
+    
+        // Nếu không có flash sale, trả về thông báo
+        if ($flashSales->isEmpty()) {
+            return response()->json([
+                'message' => 'Không có Flash Sale nào trong ngày ' . $date,
+            ], 404);
+        }
+    
         // Chỉ lấy start_time và end_time từ flash sales
         $flashSalesData = $flashSales->map(function ($flashSale) {
             return [
                 'id' => $flashSale->id,
                 'start_time' => $flashSale->start_time,
                 'end_time' => $flashSale->end_time,
+                'status' => $flashSale->status,
             ];
         });
-
+    
         return response()->json([
-            'data' => $flashSalesData
+            'data' => $flashSalesData,
+            'message' => 'Danh sách Flash Sale cho ngày ' . $date,
         ], 200);
     }
+    
 
 
 

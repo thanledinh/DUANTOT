@@ -126,7 +126,7 @@ class StatisticsController extends Controller
     // Tổng số đơn hàng
     public function getTotalOrders()
     {
-        $totalOrders = Order::count();
+        $totalOrders = Order::where('status', '!=', 'pending')->count();
         return response()->json(['total_orders' => $totalOrders]);
     }
 
@@ -141,6 +141,14 @@ class StatisticsController extends Controller
     public function getOrdersByStatus()
     {
         $orderCounts = Order::select('status', DB::raw('COUNT(*) as total'))
+            ->whereIn('status', [
+                'Giao hàng không thành công', 
+                'Tiếp nhận', 
+                'processing', 
+                'Đang vận chuyển', 
+                'Đã giao hàng', 
+                'Đã hủy'
+            ])
             ->groupBy('status')
             ->pluck('total', 'status');
 

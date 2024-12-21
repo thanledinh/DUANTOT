@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
 
 class PaymentController extends Controller
 {
-    public function getPaymentInfo($orderId)
+    public function getPaymentInfo($orderId)    
     {
         // Tìm đơn hàng theo ID
         $order = Order::find($orderId);

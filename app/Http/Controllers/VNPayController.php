@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\Payment; // Thêm mô hình Payment
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class VNPayController extends Controller
 {
@@ -141,40 +142,190 @@ class VNPayController extends Controller
         }
     }
 
-    // Phương thức cập nhật trạng thái thanh toán
-    public function updatePaymentStatus(Request $request)
-    {
-        // Validate the incoming request
-        $request->validate([
-            'transaction_id' => 'required|string',
-            // 'transaction_code' => 'required|string', // Removed this line
-            'order_id' => 'required|integer',
-            'payment_status' => 'required|string',
-        ]);
-
-        // Find the payment record
-        $payment = Payment::where('order_id', $request->order_id)->first();
-
-        if (!$payment) {
-            return response()->json(['error' => 'Payment not found'], 404);
-        }
-
-        // Update the payment record
-        $payment->update([
-            'transaction_id' => $request->transaction_id,
-            // 'transaction_code' => $request->transaction_code, // Removed this line
-            'payment_status' => $request->payment_status,
-        ]);
-
-        // Update the corresponding order's payment method
-        $order = Order::find($request->order_id);
-        if ($order) {
-            $order->update([
-                'payment_method' => 'VNPAY', // Set payment method to VNPAY
-                'status' => 'Tiếp nhận', // Set status to paid
+        // Phương thức cập nhật trạng thái thanh toán
+        public function updatePaymentStatus(Request $request)
+        {
+            // Validate the incoming request
+            $request->validate([
+                'transaction_id' => 'required|string',
+                // 'transaction_code' => 'required|string', // Removed this line
+                'order_id' => 'required|integer',
+                'payment_status' => 'required|string',
             ]);
-        }
-
+    
+            // Find the payment record
+            $payment = Payment::where('order_id', $request->order_id)->first();
+    
+            if (!$payment) {
+                return response()->json(['error' => 'Payment not found'], 404);
+            }
+    
+            // Update the payment record
+            $payment->update([
+                'transaction_id' => $request->transaction_id,
+                // 'transaction_code' => $request->transaction_code, // Removed this line
+                'payment_status' => $request->payment_status,
+            ]);
+    
+            // Update the corresponding order's payment method
+            $order = Order::find($request->order_id);
+            if ($order) {
+                $order->update([
+                    'payment_method' => 'VNPAY', // Set payment method to VNPAY
+                    'status' => 'Tiếp nhận', // Set status to paid
+                ]);
+            }
+    
         return response()->json(['message' => 'Payment status updated successfully']);
     }
+
+    public function refundPayment(Request $request)
+    {
+        // Lấy thông tin cấu hình VNPay
+        $vnp_TmnCode = 'FOTS7Y02'; // Mã website tại VNPay
+        $vnp_HashSecret = 'GZ7MH82IROI43JZSPSSEOXEPLY5ZCPYP'; // Chuỗi bí mật VNPay
+
+        // Validate input
+        $request->validate([
+            'order_id' => 'required|integer|exists:orders,id'
+        ]);
+
+        $orderId = $request->order_id;
+
+        // Tìm đơn hàng
+        $order = Order::find($orderId);
+        if (!$order) {
+            Log::warning('Order not found for refund', ['order_id' => $orderId]);
+            return response()->json(['error' => 'Order not found'], 404);
+        }
+
+        // Tìm thanh toán thành công liên quan đến đơn hàng
+        $payment = Payment::where('order_id', $orderId)
+            ->where('payment_method', 'VNPAY')
+            ->where('payment_status', 'success')
+            ->first();
+
+        if (!$payment) {
+            Log::warning('No successful payment found for refund', ['order_id' => $orderId]);
+            return response()->json(['error' => 'No successful payment found for this order'], 400);
+        }
+
+        // Tính toán số tiền hoàn
+        $refundAmount = $this->calculateRefundAmount($order);
+        if ($refundAmount <= 0) {
+            Log::warning('Invalid refund amount', ['order_id' => $orderId, 'refund_amount' => $refundAmount]);
+            return response()->json(['error' => 'Refund amount must be greater than 0'], 400);
+        }
+
+        // Chuẩn bị dữ liệu gửi đến VNPay
+        $inputData = $this->prepareVNPayRefundRequest($payment->transaction_id, $refundAmount, $vnp_TmnCode, $vnp_HashSecret);
+
+        // Gửi yêu cầu hoàn tiền
+        try {
+            Log::info('Sending refund request to VNPay', ['input_data' => $inputData]);
+            $response = $this->sendVNPayRequest($inputData);
+            $result = json_decode($response, true);
+
+            // Log phản hồi
+            Log::info('VNPay Refund Response', ['response' => $result]);
+
+            // Xử lý kết quả trả về
+            if ($result['RspCode'] === '00') {
+                $order->update(['status' => 'refunded']);
+                $payment->update(['payment_status' => 'refunded']);
+                Log::info('Refund successful', ['order_id' => $orderId, 'refund_amount' => $refundAmount]);
+                return response()->json([
+                    'message' => 'Refund successful',
+                    'refund_amount' => $refundAmount
+                ], 200);
+            } else {
+                Log::error('Refund failed', ['order_id' => $orderId, 'error_message' => $result['Message']]);
+                return response()->json(['error' => 'Refund failed: ' . $result['Message']], 400);
+            }
+        } catch (\Exception $e) {
+            Log::error('VNPay Refund Error', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Internal Server Error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Tính toán số tiền hoàn lại.
+     */
+    private function calculateRefundAmount($order)
+    {
+        $promotionAmount = $order->promotion_amount ?? 0;
+        $totalPrice = $order->total_price;
+
+        return max($totalPrice - $promotionAmount - 40000, 0);
+    }
+
+    /**
+     * Chuẩn bị dữ liệu gửi hoàn tiền đến VNPay.
+     */
+    private function prepareVNPayRefundRequest($transactionId, $refundAmount, $vnp_TmnCode, $vnp_HashSecret)
+    {
+        $vnp_RequestId = uniqid();
+        $vnp_Amount = $refundAmount * 100;
+        $vnp_CreateDate = date('YmdHis');
+        $vnp_IpAddr = request()->ip();
+
+        $inputData = [
+            'vnp_RequestId' => $vnp_RequestId,
+            'vnp_Version' => '2.1.0',
+            'vnp_Command' => 'refund',
+            'vnp_TmnCode' => $vnp_TmnCode,
+            'vnp_TransactionType' => '02',
+            'vnp_TxnRef' => $transactionId,
+            'vnp_Amount' => $vnp_Amount,
+            'vnp_OrderInfo' => 'Refund for order #' . $transactionId,
+            'vnp_TransactionDate' => $vnp_CreateDate,
+            'vnp_CreateBy' => 'admin', // Hoặc tên người dùng thực hiện
+            'vnp_CreateDate' => $vnp_CreateDate,
+            'vnp_IpAddr' => $vnp_IpAddr,
+        ];
+
+        // Tạo SecureHash
+        $hashData = implode('|', $inputData);
+        $inputData['vnp_SecureHash'] = hash_hmac('sha512', $hashData, $vnp_HashSecret);
+
+        // Log request
+        Log::info('VNPay Refund Request', ['request_data' => $inputData]);
+
+        return $inputData;
+    }
+
+    private function sendVNPayRequest($inputData)
+    {
+        $url = 'https://sandbox.vnpayment.vn/merchant_webapi/api/transaction';
+
+        $curl = curl_init();
+        curl_setopt_array($curl, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($inputData),
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+            ],
+        ]);
+
+        $response = curl_exec($curl);
+
+        if (curl_errno($curl)) {
+            throw new \Exception('CURL Error: ' . curl_error($curl));
+        }
+
+        $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        if ($httpCode != 200) {
+            throw new \Exception('VNPay returned HTTP code ' . $httpCode);
+        }
+
+        curl_close($curl);
+
+        return $response;
+    }
+    
 }
+    
+

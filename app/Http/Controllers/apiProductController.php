@@ -178,7 +178,7 @@ class apiProductController extends Controller
 
 
     public function search($query)
-    {
+    {   
         $products = Product::with('variants')
             ->where('name', 'like', '%' . $query . '%')
             ->orWhere('barcode', $query)

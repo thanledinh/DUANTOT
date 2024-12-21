@@ -184,7 +184,7 @@ class FlashSaleProductController extends Controller
             'data' => $flashSale
         ], 200);
     }
-
+    
 
 }
 

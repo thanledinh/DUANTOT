@@ -28,6 +28,7 @@ class ShippingController extends Controller
             'phone' => 'required|string|max:15',
             'ward' => 'required|string|max:255',
             'shipping_method' => 'required|string',
+            'payment_method' => 'required|string',
         ]);
 
         DB::beginTransaction();
@@ -41,6 +42,30 @@ class ShippingController extends Controller
             // Check if shipping already exists
             if ($order->shipping) {
                 return response()->json(['message' => 'Thông tin vận chuyển đã tồn tại cho đơn hàng này.'], 400);
+            }
+
+            // Kiểm tra tỷ lệ giao hàng không thành công
+            $totalShippings = Shipping::where('email', $request->email)
+                ->where('phone', $request->phone)
+                ->count();
+
+            $failedShippings = Shipping::where('email', $request->email)
+                ->where('phone', $request->phone)
+                ->whereHas('order', function ($query) {
+                    $query->where('status', 'Giao hàng không thành công');
+                })
+                ->count();
+
+            $failureRate = $totalShippings > 0 ? ($failedShippings / $totalShippings) * 100 : 0;
+
+            
+
+            if ($failureRate > 50 ) {
+                if ($request->payment_method !== 'vnpay') {
+                    return response()->json([
+                        'message' => 'Tài khoản của bạn có tỷ lệ giao hàng không thành công trên 50%. Vui lòng liên hệ hỗ trợ hoặc thanh toán qua VNPAY để tiếp tục.',
+                    ], 403);
+                }
             }
 
             // Calculate shipping cost
@@ -65,7 +90,7 @@ class ShippingController extends Controller
             $this->deductStock($order);
 
             // Update order status
-            $order->update(['status' => 'processing']);
+            $order->update(['status' => 'Chờ xác nhận']);
 
             DB::commit();
 

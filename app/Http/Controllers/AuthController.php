@@ -184,25 +184,40 @@ class AuthController extends BaseController
     }
 
 
-
     public function forgotPassword(Request $request)
     {
         // Xác thực email
         $request->validate(['email' => 'required|email']);
-
+    
+        // Kiểm tra xem OTP đã được gửi trong 1 phút trước đó chưa
+        $key = 'otp_request_' . $request->email;
+        if (cache()->has($key)) {
+            $remainingTime = cache()->get($key) - now()->timestamp;
+            return response()->json([
+                'message' => 'Bạn đã yêu cầu OTP gần đây. Vui lòng chờ.',
+                'remaining_time' => $remainingTime, // Thời gian còn lại tính bằng giây
+            ], 429);
+        }
+    
         // Tạo mã OTP ngẫu nhiên (6 chữ số)
         $otp = rand(100000, 999999);
-
+    
         // Lưu mã OTP vào cache với thời gian hết hạn 5 phút
         $expiresAt = now()->addMinutes(5);
         cache()->put('otp_' . $request->email, $otp, $expiresAt);
-
+    
+        // Lưu thời gian để chặn yêu cầu trong 1 phút
+        cache()->put($key, now()->addMinute()->timestamp, 60); // Lưu timestamp
+    
         // Gửi mã OTP đến email của người dùng
         Mail::to($request->email)->send(new OtpMail($otp));
-
-        return response()->json(['message' => 'Mã OTP đã được gửi đến email của bạn.']);
+    
+        return response()->json([
+            'message' => 'Mã OTP đã được gửi đến email của bạn.',
+            'otp_expiration' => $expiresAt->timestamp, // Thời gian hết hạn OTP
+        ]);
     }
-
+    
     public function resetPassword(Request $request)
     {
         $validator = Validator::make($request->all(), [

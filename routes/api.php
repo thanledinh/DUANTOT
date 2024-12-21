@@ -179,6 +179,8 @@ Route::get('orders/tracking-code/{tracking_code},{phone}', [OrderController::cla
 Route::post('orders', [OrderController::class, 'store']);
 Route::put('orders/{order_id}', [OrderController::class, 'update']);
 Route::delete('orders/{order_id}', [OrderController::class, 'destroy']);
+Route::put('orders/status/{id}', [OrderController::class, 'updateOrderStatus']);
+
 
 
 // Flash Sale Routes
@@ -224,6 +226,8 @@ Route::get('payment/{order_id}', [PaymentController::class, 'getPaymentInfo']);
 Route::get('payment/transaction/{transaction_code}', [PaymentController::class, 'getLatestTransaction']);
 Route::post('/create-payment', [VNPayController::class, 'createPayment']);
 Route::post('/update-payment-status', [VNPayController::class, 'updatePaymentStatus']);
+Route::post('/vnpay/refund', [VNPayController::class, 'refundPayment']);
+
 // AI Routes
 Route::post('/ai/search-product', [BoxChatAIController::class, 'searchProduct']);
 

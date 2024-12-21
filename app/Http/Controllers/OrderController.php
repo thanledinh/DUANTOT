@@ -50,20 +50,6 @@ class OrderController extends Controller
         ]);
     
         try {
-            // 1. Kiểm tra lịch sử bom hàng của khách hàng
-            $bombOrderCount = Order::where('status', 'canceled')
-            ->whereHas('shipping', function ($query) use ($request) {
-            $query->where('phone', $request->phone)
-            ->orWhere('email', $request->email);
-            })
-            ->count();
-
-            if ($bombOrderCount >= 3 && $request->payment_method == 'cash') {
-            return response()->json([
-            'message' => 'Bạn đã có hơn 3 đơn hàng bị hủy. Vui lòng thanh toán trước để tiếp tục đặt hàng.'
-            ], 400);
-            }
-            
             $items = $request->items;
             $productIds = array_column($items, 'product_id');
             $variantIds = array_column($items, 'variant_id');
@@ -86,15 +72,18 @@ class OrderController extends Controller
                 if (!$product || !$variant) {
                     return response()->json(['message' => 'Sản phẩm hoặc biến thể không hợp lệ.'], 400);
                 }
-                // kiễm tra sản phẩm có tham gia sale không
-                $flashSaleProduct = FlashSaleProduct::where('product_id', $item['product_id'])->first();
                 
-                if ($flashSaleProduct) {
-                $flashSale = FlashSale::find($flashSaleProduct->flash_sale_id);
+                // Kiểm tra sản phẩm có tham gia sale không, bỏ qua nếu sale gửi lên là 0
+                if ($item['sale'] !== 0) {
+                    $flashSaleProduct = FlashSaleProduct::where('product_id', $item['product_id'])->first();
+                    
+                    if ($flashSaleProduct) {
+                        $flashSale = FlashSale::find($flashSaleProduct->flash_sale_id);
 
-                if ($flashSale && now()->greaterThan($flashSale->end_time)) {
-                    return response()->json(['message' => 'Flash sale đã hết hạn cho sản phẩm ' . $product->name], 400);
-                }
+                        if ($flashSale && now()->greaterThan($flashSale->end_time)) {
+                            return response()->json(['message' => 'Flash sale đã hết hạn cho sản phẩm ' . $product->name], 400);
+                        }
+                    }
                 }
 
                 // Nếu giá được người dùng gửi không đúng, thay bằng giá của variant
@@ -422,4 +411,53 @@ class OrderController extends Controller
         }
     }
 }
+
+    public function updateOrderStatus(Request $request, $id)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Lỗi: Người dùng không tồn tại.'], 401);
+        }
+        $order = Order::where('user_id', $user->id)->find($id);
+        if (!$order) {
+            return response()->json(['message' => 'Đơn hàng không tồn tại hoặc không thuộc về người dùng.'], 404);
+        }
+        
+        if ($order->status == 'Đã giao hàng' || $order->status == 'Đã hủy') {
+            return response()->json(['message' => 'Không thể thay đổi trạng thái của đơn hàng đã được giao hoặc đã hủy.'], 403);
+        }
+
+        try {
+            // Sử dụng phương thức thanh toán hiện tại của đơn hàng
+            $paymentMethod = $order->payment_method;
+
+            // Cập nhật trạng thái đơn hàng
+            $order->update([
+                'status' => 'Yêu cầu hủy', // Hoặc trạng thái khác nếu cần
+                'payment_method' => $paymentMethod,
+            ]);
+
+            if ($paymentMethod === 'cash') {
+                $order->status = 'Yêu cầu hủy';
+                $order->save();
+            }
+
+            return response()->json([
+                'message' => 'Đơn hàng đã được cập nhật thành công.',
+                'order' => $order
+            ], 200);
+        } catch (\Exception $e) {
+            return $this->logError($e);
+        }
+    }
+
+    private function logError(\Exception $e)
+    {
+        // Ghi lại lỗi chi tiết
+        return response()->json([
+            'message' => 'Đã xảy ra lỗi khi cập nhật đơn hàng.',
+            'error' => $e->getMessage(), // Thêm thông tin lỗi chi tiết
+            'trace' => $e->getTraceAsString() // Thêm stack trace để dễ dàng debug
+        ], 500);
+    }
 }

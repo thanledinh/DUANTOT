@@ -28,9 +28,6 @@ class AdminProductsController extends Controller
     // Lấy danh sách các biến thể của sản phẩm có stock quantity từ thấp tới cao
     public function index(Request $request)
     {
-        $pageSize = $request->input('pageSize', 10); // Mặc định là 10 sản phẩm mỗi trang
-        $pageNumber = $request->input('pageNumber', 1); // Mặc định là trang đầu tiên
-
         // Truy vấn sản phẩm và tải trước thông tin biến thể
         $products = Product::with('variants')
             ->get()
@@ -58,13 +55,11 @@ class AdminProductsController extends Controller
             ->sortBy('lowest_stock')
             ->values();
 
-        // Phân trang danh sách sản phẩm
-        $paginatedProducts = $products->forPage($pageNumber, $pageSize);
+        // Bỏ phân trang danh sách sản phẩm
+        // $paginatedProducts = $products->forPage($pageNumber, $pageSize);
 
         return response()->json([
-            'data' => $paginatedProducts->values(),
-            'current_page' => $pageNumber,
-            'page_size' => $pageSize,
+            'data' => $products, // Trả về tất cả sản phẩm
             'total' => $products->count(),
         ]);
     }

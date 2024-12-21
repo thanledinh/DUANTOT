@@ -16,8 +16,14 @@ class apiWishlistController extends Controller
     {
         // Xác thực người dùng bằng JWT
         $user = $request->user();
-        // Lấy danh sách sản phẩm yêu thích của người dùng
-        $favorites = Wishlist::where('user_id', $user->id)->with('product')->get();
+        // Lấy danh sách sản phẩm yêu thích của người dùng, ẩn description
+        $favorites = Wishlist::where('user_id', $user->id)
+            ->with('product') // Giữ nguyên việc lấy toàn bộ thông tin sản phẩm
+            ->get()
+            ->map(function($item) {
+                $item->product->description = null; // Ẩn trường description
+                return $item;
+            });
         return response()->json($favorites, 200);
     }
 
